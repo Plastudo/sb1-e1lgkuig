@@ -16,7 +16,6 @@
 // 9. Mostra quantidade de resultados e lista de tutores em cards, incluindo foto, avaliação, localização, disponibilidade, matérias e biografia.
 // 10. Caso não existam tutores filtrados, exibe estado vazio com botão para limpar filtros.
 
-
 //-----------------CODE-----------------
 
 import React, { useEffect, useState } from 'react' // Importa React e hooks de estado e efeito
@@ -28,7 +27,7 @@ import { Input } from './ui/input' // Campo de input estilizado
 import { supabase, TutorData } from '../lib/supabase' // Supabase e tipo de dados do tutor
 import { Search, Star, Mail, MapPin, Clock } from 'lucide-react' // Ícones usados na interface
 
-// Mock data for demonstration
+// Mock data para demonstração
 const mockTutors: (TutorData & { rating: number; location: string; availability: string; profilePicture: string })[] = [ // Array de tutores fictícios
   {
     id: '1',
@@ -127,9 +126,7 @@ export const Marketplace = () => {
     if (searchTerm) { // Se houver termo de pesquisa
       filtered = filtered.filter(tutor =>
         tutor.name.toLowerCase().includes(searchTerm.toLowerCase()) || // Pesquisa pelo nome
-        tutor.subjects?.some(subject => 
-          subject.toLowerCase().includes(searchTerm.toLowerCase()) // Pesquisa por matéria
-        ) ||
+        tutor.subjects?.some(subject => subject.toLowerCase().includes(searchTerm.toLowerCase())) || // Pesquisa por matéria
         tutor.location.toLowerCase().includes(searchTerm.toLowerCase()) // Pesquisa por localização
       )
     }
@@ -176,7 +173,8 @@ export const Marketplace = () => {
           {/* Search and Filters */}
           <div className="max-w-4xl mx-auto space-y-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" /> {/* Ícone de pesquisa */}
+              {/* Ícone de pesquisa */}
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
               <Input
                 type="text"
                 placeholder="Pesquisar por nome, disciplina ou localização..."
@@ -187,16 +185,17 @@ export const Marketplace = () => {
             </div>
 
             <div className="flex flex-wrap gap-2 justify-center">
-              {subjects.map((subject) => ( // Botões de filtro por disciplina
+              {/* Botões de filtro por disciplina */}
+              {subjects.map((subject) => (
                 <Button
                   key={subject}
-                  variant={selectedSubject === subject ? "default" : "outline"}
+                  variant={selectedSubject === subject ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => setSelectedSubject(subject)} // Atualiza disciplina selecionada
                   className={
                     selectedSubject === subject
-                      ? "bg-gradient-to-r from-green-500 to-blue-500 text-white"
-                      : "border-gray-300 hover:border-green-400"
+                      ? 'bg-gradient-to-r from-green-500 to-blue-500 text-white'
+                      : 'border-gray-300 hover:border-green-400'
                   }
                 >
                   {subject === 'all' ? 'Todas as disciplinas' : subject}
@@ -220,7 +219,8 @@ export const Marketplace = () => {
 
         {/* Tutors Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredTutors.map((tutor, index) => ( // Para cada tutor filtrado
+          {/* Para cada tutor filtrado */}
+          {filteredTutors.map((tutor, index) => (
             <motion.div
               key={tutor.id}
               initial={{ opacity: 0, y: 30 }}
@@ -264,7 +264,8 @@ export const Marketplace = () => {
                         {subject}
                       </span>
                     ))}
-                    {tutor.subjects && tutor.subjects.length > 3 && ( // Se houver mais de 3 disciplinas
+                    {/* Se houver mais de 3 disciplinas */}
+                    {tutor.subjects && tutor.subjects.length > 3 && (
                       <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
                         +{tutor.subjects.length - 3} mais
                       </span>
@@ -277,7 +278,8 @@ export const Marketplace = () => {
                 </p>
 
                 <div className="space-y-2 mt-auto">
-                  <Link to={`/profile/${tutor.id}`}> {/* Link para perfil completo */}
+                  {/* Link para perfil completo */}
+                  <Link to={`/profile/${tutor.id}`}>
                     <Button
                       variant="outline"
                       className="w-full group-hover:border-green-400 transition-colors"
@@ -285,8 +287,10 @@ export const Marketplace = () => {
                       Ver perfil completo
                     </Button>
                   </Link>
+
+                  {/* Botão para enviar email */}
                   <Button
-                    onClick={() => handleContactTutor(tutor.email, tutor.name)} // Botão para enviar email
+                    onClick={() => handleContactTutor(tutor.email, tutor.name)}
                     className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
                   >
                     <Mail className="h-4 w-4 mr-2" />
@@ -299,7 +303,8 @@ export const Marketplace = () => {
         </div>
 
         {/* Empty State */}
-        {filteredTutors.length === 0 && ( // Se não houver tutores filtrados
+        {filteredTutors.length === 0 && (
+          // Se não houver tutores filtrados
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -328,4 +333,4 @@ export const Marketplace = () => {
       </div>
     </div>
   )
-} 
+}
