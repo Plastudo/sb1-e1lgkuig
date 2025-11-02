@@ -1,8 +1,8 @@
 //-----------------RESUMO GERAL-----------------
-//Este código cria a página de perfil de um tutor para uma plataforma de ensino online.
-//Ele mostra informações do tutor como foto, nome, matérias que ensina, biografia, classificação, localização, disponibilidade, experiência e educação.
-//Permite que o próprio tutor edite seu perfil e que outros utilizadores contactem o tutor por email.
-//Em produção, os dados viriam do Supabase, mas aqui usamos dados simulados (mock).
+// Este código cria a página de perfil de um tutor para uma plataforma de ensino online.
+// Ele mostra informações do tutor como foto, nome, matérias que ensina, biografia, classificação, localização, disponibilidade, experiência e educação.
+// Permite que o próprio tutor edite seu perfil e que outros utilizadores contactem o tutor por email.
+// Em produção, os dados viriam do Supabase, mas aqui usamos dados simulados (mock).
 
 //-----------------FLUXO DO CÓDIGO-----------------
 // 1. Importa React, hooks, navegação, animações, componentes de UI e ícones.
@@ -18,36 +18,34 @@
 
 //-----------------CODE-----------------
 
-//-----------------CÓDIGO COMENTADO-----------------
-
-import React, { useEffect, useState } from 'react' // Importa React e hooks para gerir estado e efeitos
-import { useParams, useNavigate } from 'react-router-dom' // Importa funções de navegação e parâmetros de URL
-import { motion } from 'framer-motion' // Importa biblioteca para animações
-import { Card } from './ui/card' // Componente Card para agrupar conteúdo visual
+import React, { useEffect, useState } from 'react' // Importa React e hooks
+import { useParams, useNavigate } from 'react-router-dom' // Navegação e parâmetros da URL
+import { motion } from 'framer-motion' // Biblioteca para animações
+import { Card } from './ui/card' // Componente de cartão
 import { Button } from './ui/button' // Botão estilizado
 import { Input } from './ui/input' // Campo de texto
-import { Textarea } from './ui/textarea' // Campo de texto multi-linha
-import { Badge } from './ui/badge' // Etiquetas para matérias
-import { useAuth } from '../contexts/AuthContext' // Contexto de autenticação do utilizador
-import { supabase, TutorData } from '../lib/supabase' // Supabase e tipo de dados do tutor
-import { 
-  Star, 
-  Mail, 
-  MapPin, 
-  Clock, 
-  Edit3, 
-  Save, 
-  X, 
+import { Textarea } from './ui/textarea' // Campo multi-linha
+import { Badge } from './ui/badge' // Etiqueta de matéria
+import { useAuth } from '../contexts/AuthContext' // Contexto de autenticação
+import { supabase, TutorData } from '../lib/supabase' // Supabase e tipo TutorData
+import {
+  Star,
+  Mail,
+  MapPin,
+  Clock,
+  Edit3,
+  Save,
+  X,
   GraduationCap,
   Award,
   BookOpen,
   User
-} from 'lucide-react' // Ícones usados no perfil
+} from 'lucide-react' // Ícones
 
-// Dados simulados para demonstração
+// Dados simulados
 const mockTutorData = { /* ...tutores mock... */ }
 
-// Tipo que adiciona campos extras ao TutorData original
+// Tipo extendido com campos adicionais
 type ExtendedTutorData = TutorData & {
   rating: number
   location: string
@@ -60,64 +58,55 @@ type ExtendedTutorData = TutorData & {
   successRate: string
 }
 
-// Componente principal de perfil de tutor
+// Componente principal
 export const TutorProfile = () => {
-  const { id } = useParams<{ id: string }>() // Obtém id do tutor da URL
-  const { user } = useAuth() // Usuário logado
-  const navigate = useNavigate() // Função para navegar entre páginas
-  const [tutor, setTutor] = useState<ExtendedTutorData | null>(null) // Dados do tutor
-  const [isEditing, setIsEditing] = useState(false) // Modo edição
-  const [editData, setEditData] = useState<Partial<ExtendedTutorData>>({}) // Dados sendo editados
-  const [loading, setLoading] = useState(true) // Estado de carregamento
+  const { id } = useParams<{ id: string }>()
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const [tutor, setTutor] = useState<ExtendedTutorData | null>(null)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editData, setEditData] = useState<Partial<ExtendedTutorData>>({})
+  const [loading, setLoading] = useState(true)
 
-  // useEffect carrega os dados do tutor quando o componente monta
+  // Carrega dados do tutor
   useEffect(() => {
-    if (!id) { // Se não houver id na URL
-      navigate('/marketplace') // Redireciona para o marketplace
+    if (!id) {
+      navigate('/marketplace')
       return
     }
-
-    // Usa dados simulados. Em produção, buscar do Supabase
     const tutorData = mockTutorData[id as keyof typeof mockTutorData]
-    if (tutorData) { 
-      setTutor(tutorData) // Define tutor
-      setEditData(tutorData) // Preenche dados para edição
+    if (tutorData) {
+      setTutor(tutorData)
+      setEditData(tutorData)
     } else {
-      navigate('/marketplace') // Redireciona se tutor não encontrado
+      navigate('/marketplace')
     }
-    setLoading(false) // Termina carregamento
+    setLoading(false)
   }, [id, navigate])
 
-  const isOwner = user && tutor && user.id === tutor.user_id // Verifica se o utilizador é o dono do perfil
+  const isOwner = user && tutor && user.id === tutor.user_id
 
-  // Salvar alterações feitas pelo tutor
+  // Guardar alterações
   const handleSave = async () => {
-    if (!tutor || !isOwner) return // Só salva se for o dono
-
+    if (!tutor || !isOwner) return
     try {
-      // Em produção, salvaria no Supabase
-      // const { error } = await supabase
-      //   .from('tutores')
-      //   .update(editData)
-      //   .eq('id', tutor.id)
-      // if (error) throw error
-
-      setTutor({ ...tutor, ...editData }) // Atualiza estado local
-      setIsEditing(false) // Sai do modo edição
+      // Em produção: salvar no Supabase
+      setTutor({ ...tutor, ...editData })
+      setIsEditing(false)
     } catch (error) {
-      console.error('Error updating profile:', error) // Log de erro
+      console.error('Erro ao atualizar perfil:', error)
     }
   }
 
-  // Função para contactar tutor via email
+  // Contactar tutor
   const handleContactTutor = () => {
     if (!tutor) return
-    const subject = encodeURIComponent(`Interessado em explicações - Plastudo`)
+    const subject = encodeURIComponent('Interessado em explicações - Plastudo')
     const body = encodeURIComponent(`Olá ${tutor.name},\n\nEncontrei o seu perfil na Plastudo e estou interessado(a) nas suas explicações.\n\nPodemos conversar sobre disponibilidade e condições?\n\nObrigado(a)!`)
-    window.location.href = `mailto:${tutor.email}?subject=${subject}&body=${body}` // Abre cliente de email
+    window.location.href = `mailto:${tutor.email}?subject=${subject}&body=${body}`
   }
 
-  // Exibe animação de carregamento enquanto carrega dados
+  // Estado de carregamento
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8">
@@ -132,21 +121,19 @@ export const TutorProfile = () => {
     )
   }
 
-  // Se tutor não encontrado
+  // Tutor não encontrado
   if (!tutor) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Explicador não encontrado</h2>
-          <Button onClick={() => navigate('/marketplace')}>
-            Voltar ao marketplace
-          </Button>
+          <Button onClick={() => navigate('/marketplace')}>Voltar ao marketplace</Button>
         </div>
       </div>
     )
   }
 
-  // Renderização principal do perfil
+  // Renderização principal
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8">
       <div className="max-w-4xl mx-auto px-4">
@@ -156,11 +143,7 @@ export const TutorProfile = () => {
           animate={{ opacity: 1, y: 0 }}
           className="mb-6"
         >
-          <Button
-            variant="outline"
-            onClick={() => navigate(-1)}
-            className="mb-4"
-          >
+          <Button variant="outline" onClick={() => navigate(-1)} className="mb-4">
             ← Voltar
           </Button>
         </motion.div>
@@ -176,14 +159,14 @@ export const TutorProfile = () => {
               {/* Imagem e informações básicas */}
               <div className="text-center lg:text-left">
                 <img
-                  src={tutor.profilePicture} // Foto do tutor
-                  alt={tutor.name} 
+                  src={tutor.profilePicture}
+                  alt={tutor.name}
                   className="w-32 h-32 rounded-2xl mx-auto lg:mx-0 mb-4 object-cover ring-4 ring-yellow-100"
                 />
                 <div className="space-y-2">
                   <div className="flex items-center justify-center lg:justify-start space-x-2">
                     <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                    <span className="font-semibold text-lg">{tutor.rating}</span> {/* Classificação */}
+                    <span className="font-semibold text-lg">{tutor.rating}</span>
                     <span className="text-gray-600">({tutor.totalStudents} alunos)</span>
                   </div>
                   <div className="flex items-center justify-center lg:justify-start space-x-2 text-gray-600">
@@ -201,23 +184,22 @@ export const TutorProfile = () => {
               <div className="flex-1">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    {isEditing ? ( // Se estiver em edição
+                    {isEditing ? (
                       <Input
                         value={editData.name || ''}
                         onChange={(e) => setEditData({ ...editData, name: e.target.value })}
                         className="text-3xl font-bold mb-2"
                       />
-                    ) : ( // Modo visualização
-                      <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                        {tutor.name}
-                      </h1>
+                    ) : (
+                      <h1 className="text-3xl font-bold text-gray-900 mb-2">{tutor.name}</h1>
                     )}
                     <p className="text-xl text-green-600 font-semibold mb-2">
                       {tutor.hourlyRate}
                     </p>
                   </div>
 
-                  {isOwner && ( // Botões de edição se dono
+                  {/* Botões de edição se dono */}
+                  {isOwner && (
                     <div className="space-x-2">
                       {isEditing ? (
                         <>
@@ -255,7 +237,10 @@ export const TutorProfile = () => {
                 <div className="mb-4">
                   <div className="flex flex-wrap gap-2">
                     {tutor.subjects?.map((subject) => (
-                      <Badge key={subject} className="bg-green-100 text-green-700 hover:bg-green-200">
+                      <Badge
+                        key={subject}
+                        className="bg-green-100 text-green-700 hover:bg-green-200"
+                      >
                         {subject}
                       </Badge>
                     ))}
@@ -272,9 +257,7 @@ export const TutorProfile = () => {
                       rows={4}
                     />
                   ) : (
-                    <p className="text-gray-700 leading-relaxed">
-                      {tutor.bio}
-                    </p>
+                    <p className="text-gray-700 leading-relaxed">{tutor.bio}</p>
                   )}
                 </div>
 
@@ -296,6 +279,7 @@ export const TutorProfile = () => {
 
         {/* Estatísticas e informação adicional */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          {/* Cartão 1 - Taxa de sucesso */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -308,6 +292,7 @@ export const TutorProfile = () => {
             </Card>
           </motion.div>
 
+          {/* Cartão 2 - Alunos */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -320,6 +305,7 @@ export const TutorProfile = () => {
             </Card>
           </motion.div>
 
+          {/* Cartão 3 - Experiência */}
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -333,7 +319,7 @@ export const TutorProfile = () => {
           </motion.div>
         </div>
 
-        {/* Formação e experiência */}
+        {/* Formação e Experiência */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -359,4 +345,4 @@ export const TutorProfile = () => {
       </div>
     </div>
   )
-} 
+}
