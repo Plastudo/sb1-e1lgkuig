@@ -1,297 +1,294 @@
-//-----------------RESUMO GERAL-----------------
-// Este código define a página principal do "Marketplace" da plataforma de explicadores online.
-// Apresenta uma lista de tutores (mock data neste exemplo) com possibilidade de pesquisa, filtro por disciplina e contacto direto via email.
-// Cada tutor é exibido com foto, nome, avaliação, localização, disponibilidade, matérias e biografia resumida.
-// O utilizador pode visualizar o perfil completo do tutor ou enviar um email diretamente através de um botão de contacto.
+//-----------RESUMO----------------------------
+//Este código cria um questionário interativo para estudantes numa aplicação feita com React.
+//O questionário recolhe respostas do utilizador (por exemplo, em que área precisa de ajuda) e, no final, mostra uma lista de explicadores (tutores) que correspondem às suas preferências.
+//Cada tutor é apresentado com o seu nome, foto, descrição e avaliação. O utilizador pode depois ver o perfil completo ou entrar em contacto por e-mail diretamente.
 
-//-----------------FLUXO DO CÓDIGO-----------------
-// 1. Importa React, hooks, componentes visuais, animações e ícones.
-// 2. Define um array de "mockTutors" (dados fictícios) para demonstração.
-// 3. Cria o componente Marketplace, com estados locais: tutors, filteredTutors, searchTerm e selectedSubject.
-// 4. useEffect inicial reservado para futura integração com Supabase (carregamento real de tutores).
-// 5. useEffect de filtragem: aplica filtros de texto e disciplina sempre que searchTerm, selectedSubject ou tutors mudam.
-// 6. handleContactTutor: função que abre o cliente de email com assunto e corpo pré-preenchidos.
-// 7. Define lista de disciplinas disponíveis para pesquisa e filtro.
-// 8. Renderiza o cabeçalho, campo de pesquisa, botões de filtro, contagem de resultados e a grelha de tutores.
-// 9. Se não existirem tutores correspondentes, mostra estado vazio com opção para limpar filtros.
+//--------- FLUXO DO CÒDIGO --------------------
+//O código começa por importar bibliotecas e componentes necessários, como React, animações (Framer Motion) e ícones (Lucide).
+//Define uma lista chamada questions com perguntas e opções de resposta (neste caso, apenas uma pergunta de exemplo).
+//Define também uma lista chamada mockTutors com dados fictícios de explicadores (nome, disciplina, avaliação, foto, etc.).
+//Cria o componente StudentQuestionnaire, que:
+  //Usa o estado (useState) para guardar qual a pergunta atual, as respostas do utilizador e se os resultados devem ser mostrados.
+  //Usa a função navigate (de React Router) para mudar de página ou perfil.
+  //Define handleAnswer — uma função que guarda a resposta e avança para a próxima pergunta (ou mostra os resultados se for a última).
+  //Define handleContactTutor — que abre um e-mail com uma mensagem pré-escrita para o tutor selecionado.
+  //Define goBack — que permite voltar à pergunta anterior ou sair dos resultados.
+//Se showResults for verdadeiro, o código mostra a lista de explicadores compatíveis, com animações e botões para ver o perfil ou contactar.
+//Caso contrário, mostra o questionário com uma barra de progresso, as opções de resposta e um botão “Anterior”.
 
+//---------CODE----------------
+import React, { useState } from 'react'  // Importa React e a função useState para gerir valores que mudam ao longo do tempo
+import { useNavigate } from 'react-router-dom'  // Importa a função para navegar entre páginas
+import { motion, AnimatePresence } from 'framer-motion'  // Importa componentes que criam animações suaves
+import { Button } from './ui/button'  // Importa o componente de botão personalizado
+import { Card } from './ui/card'  // Importa o componente de cartão personalizado (estrutura visual)
+import { ChevronRight, ChevronLeft, Check, Star, Mail } from 'lucide-react'  // Importa ícones prontos a usar
 
-import React, { useEffect, useState } from 'react' // Importa React e hooks de estado/efeito
-import { Link } from 'react-router-dom' // Cria navegação interna sem recarregar página
-import { motion } from 'framer-motion' // Biblioteca de animações para React
-import { Card } from './ui/card' // Componente de cartão estilizado
-import { Button } from './ui/button' // Componente de botão
-import { Input } from './ui/input' // Campo de input estilizado
-import { supabase, TutorData } from '../lib/supabase' // Integração com Supabase e tipo de tutor
-import { Search, Star, Mail, MapPin, Clock } from 'lucide-react' // Ícones SVG para interface
-
-//----------------- MOCK DATA -----------------
-// Dados fictícios usados apenas para demonstração da interface
-const mockTutors: (TutorData & { rating: number; location: string; availability: string; profilePicture: string })[] = [
+// Define a lista de perguntas do questionário
+const questions = [
   {
-    id: '1',
-    user_id: 'mock-1',
-    name: 'Ana Silva',
-    email: 'ana.silva@email.com',
-    question_1_answer: 'matematica',
-    bio: 'Professora experiente com 8 anos de ensino. Especializada em álgebra, cálculo e estatística. Métodos personalizados para cada aluno.',
-    subjects: ['Matemática', 'Álgebra', 'Cálculo'],
-    rating: 4.9,
-    location: 'Lisboa',
-    availability: 'Manhãs e tardes',
-    profilePicture: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&fit=crop'
-  },
-  {
-    id: '2',
-    user_id: 'mock-2',
-    name: 'João Santos',
-    email: 'joao.santos@email.com',
-    question_1_answer: 'ciencias',
-    bio: 'Engenheiro químico com paixão pelo ensino. Experiência em preparação para exames nacionais e universitários.',
-    subjects: ['Física', 'Química', 'Ciências'],
-    rating: 4.8,
-    location: 'Porto',
-    availability: 'Tardes e noites',
-    profilePicture: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&fit=crop'
-  },
-  {
-    id: '3',
-    user_id: 'mock-3',
-    name: 'Maria Costa',
-    email: 'maria.costa@email.com',
-    question_1_answer: 'ciencias',
-    bio: 'Doutora em biologia molecular. Especializada em biologia celular e genética. Abordagem científica e didática.',
-    subjects: ['Biologia', 'Genética', 'Ciências Naturais'],
-    rating: 4.9,
-    location: 'Braga',
-    availability: 'Flexível',
-    profilePicture: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&fit=crop'
-  },
-  // ... (restantes mock tutors omitidos por brevidade)
+    id: 1,  // Identificador da pergunta
+    title: "Em que área precisa de ajuda?",  // Texto da pergunta mostrado ao utilizador
+    options: [  // Lista das possíveis respostas
+      { value: "matematica", label: "A) Matemática e Ciências Exatas" },
+      { value: "linguas", label: "B) Línguas e Literatura" },
+      { value: "ciencias", label: "C) Ciências Naturais e Biologia" },
+      { value: "humanas", label: "D) Ciências Humanas e Sociais" }
+    ]
+  }
 ]
 
-export const Marketplace = () => {
-  // ----------------- ESTADOS -----------------
-  const [tutors, setTutors] = useState(mockTutors) // Lista completa de tutores
-  const [filteredTutors, setFilteredTutors] = useState(mockTutors) // Lista filtrada
-  const [searchTerm, setSearchTerm] = useState('') // Texto de pesquisa
-  const [selectedSubject, setSelectedSubject] = useState('all') // Filtro de disciplina
+// Dados fictícios de tutores — simulam resultados que apareceriam depois do questionário
+const mockTutors = [
+  {
+    id: 1,
+    name: "Ana Silva",
+    subject: "Matemática",
+    bio: "Professora experiente com 8 anos de ensino. Especializada em álgebra e cálculo.",
+    rating: 4.9,  // Avaliação média
+    email: "ana.silva@email.com",  // Email de contacto
+    profilePicture: "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop"  // Foto do tutor
+  },
+  {
+    id: 2,
+    name: "João Santos",
+    subject: "Física e Química",
+    bio: "Engenheiro químico com paixão pelo ensino. Métodos práticos e eficazes.",
+    rating: 4.8,
+    email: "joao.santos@email.com",
+    profilePicture: "https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop"
+  },
+  {
+    id: 3,
+    name: "Maria Costa",
+    subject: "Biologia",
+    bio: "Doutora em biologia molecular. Abordagem científica e didática personalizada.",
+    rating: 4.9,
+    email: "maria.costa@email.com",
+    profilePicture: "https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop"
+  }
+]
 
-  // ----------------- EFEITOS -----------------
-  useEffect(() => {
-    // TODO: Substituir mockTutors por dados reais do Supabase
-    // Exemplo futuro: loadTutors()
-  }, [])
+// Cria o componente principal do questionário do estudante
+export const StudentQuestionnaire = () => {
+  const [currentQuestion, setCurrentQuestion] = useState(0)  // Guarda qual é a pergunta atual (começa na 1ª)
+  const [answers, setAnswers] = useState<Record<string, string>>({})  // Guarda as respostas do utilizador
+  const [showResults, setShowResults] = useState(false)  // Define se já deve mostrar os tutores (resultados)
+  const navigate = useNavigate()  // Permite mudar de página
 
-  // Filtrar tutores quando searchTerm, selectedSubject ou tutors mudam
-  useEffect(() => {
-    let filtered = tutors
+  // Função chamada quando o utilizador escolhe uma resposta
+  const handleAnswer = (questionId: number, answer: string) => {
+    const newAnswers = { ...answers, [`question_${questionId}_answer`]: answer }  // Cria uma nova lista de respostas incluindo a nova
+    setAnswers(newAnswers)  // Atualiza o estado com as respostas mais recentes
 
-    // Aplicar filtro de pesquisa
-    if (searchTerm) {
-      filtered = filtered.filter(tutor =>
-        tutor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        tutor.subjects?.some(subject => subject.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        tutor.location.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+    // Verifica se há mais perguntas ou se é a última
+    if (currentQuestion < questions.length - 1) {
+      setCurrentQuestion(currentQuestion + 1)  // Avança para a próxima pergunta
+    } else {
+      setShowResults(true)  // Se for a última, mostra os resultados (tutores)
     }
-
-    // Aplicar filtro de disciplina
-    if (selectedSubject !== 'all') {
-      filtered = filtered.filter(tutor =>
-        tutor.subjects?.some(subject =>
-          subject.toLowerCase().includes(selectedSubject.toLowerCase())
-        )
-      )
-    }
-
-    setFilteredTutors(filtered) // Atualizar lista filtrada
-  }, [searchTerm, selectedSubject, tutors])
-
-  // ----------------- FUNÇÕES -----------------
-  /**
-   * Abre o cliente de email do utilizador com mensagem pré-preenchida
-   * @param email - Email do tutor
-   * @param tutorName - Nome do tutor
-   */
-  const handleContactTutor = (email: string, tutorName: string) => {
-    const subject = encodeURIComponent('Interessado em explicações - Plastudo')
-    const body = encodeURIComponent(`Olá ${tutorName},\n\nEncontrei o seu perfil na Plastudo e estou interessado(a) nas suas explicações.\n\nPodemos conversar sobre disponibilidade e condições?\n\nObrigado(a)!`)
-    window.location.href = `mailto:${email}?subject=${subject}&body=${body}`
   }
 
-  // Lista de disciplinas disponíveis para filtro
-  const subjects = ['all', 'Matemática', 'Física', 'Química', 'Biologia', 'Português', 'Inglês', 'História']
+  // Função para abrir o e-mail de contacto do tutor com uma mensagem pré-escrita
+  const handleContactTutor = (email: string, tutorName: string) => {
+    const subject = encodeURIComponent(`Interessado em explicações - Plastudo`)  // Define o assunto do e-mail
+    const body = encodeURIComponent(`Olá ${tutorName},\n\nEncontrei o seu perfil na Plastudo e estou interessado(a) nas suas explicações.\n\nPodemos conversar sobre disponibilidade e condições?\n\nObrigado(a)!`)  // Define o corpo do e-mail
+    window.location.href = `mailto:${email}?subject=${subject}&body=${body}`  // Abre o programa de e-mail do utilizador
+  }
 
-  // ----------------- RENDER -----------------
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8">
-      <div className="max-w-7xl mx-auto px-4">
-        
-        {/* ----------------- HEADER ----------------- */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-8"
-        >
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Encontre o seu{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-600 to-green-600">
-              explicador ideal
-            </span>
-          </h1>
-          <p className="text-lg text-gray-600 mb-8">
-            Explore os nossos explicadores qualificados e encontre quem melhor se adequa às suas necessidades
-          </p>
+  // Função para voltar atrás (no questionário ou nos resultados)
+  const goBack = () => {
+    if (showResults) {  // Se estiver a mostrar resultados...
+      setShowResults(false)  // Volta ao modo do questionário
+      setCurrentQuestion(questions.length - 1)  // Volta à última pergunta
+    } else if (currentQuestion > 0) {  // Se não for a primeira pergunta
+      setCurrentQuestion(currentQuestion - 1)  // Volta uma pergunta atrás
+    }
+  }
 
-          {/* ----------------- PESQUISA E FILTROS ----------------- */}
-          <div className="max-w-4xl mx-auto space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-              <Input
-                type="text"
-                placeholder="Pesquisar por nome, disciplina ou localização..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)} // Atualizar searchTerm
-                className="pl-10 py-3 text-lg border-2 border-gray-200 rounded-2xl focus:border-green-400"
-              />
-            </div>
-
-            {/* Botões de filtro por disciplina */}
-            <div className="flex flex-wrap gap-2 justify-center">
-              {subjects.map((subject) => (
-                <Button
-                  key={subject}
-                  variant={selectedSubject === subject ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedSubject(subject)} // Atualizar filtro selecionado
-                  className={
-                    selectedSubject === subject
-                      ? 'bg-gradient-to-r from-green-500 to-blue-500 text-white'
-                      : 'border-gray-300 hover:border-green-400'
-                  }
-                >
-                  {subject === 'all' ? 'Todas as disciplinas' : subject}
-                </Button>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-
-        {/* ----------------- CONTAGEM DE RESULTADOS ----------------- */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="mb-6"
-        >
-          <p className="text-gray-600 text-center">
-            {filteredTutors.length} explicador{filteredTutors.length !== 1 ? 'es' : ''} encontrado{filteredTutors.length !== 1 ? 's' : ''}
-          </p>
-        </motion.div>
-
-        {/* ----------------- LISTA DE TUTORES ----------------- */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredTutors.map((tutor, index) => (
-            <motion.div
-              key={tutor.id}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
+  // Se o utilizador já chegou ao fim e está a ver os resultados (tutores)
+  if (showResults) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8">  {/* Fundo colorido */}
+        <div className="max-w-6xl mx-auto px-4">  {/* Centraliza o conteúdo */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}  // Começa invisível e deslocado para baixo
+            animate={{ opacity: 1, y: 0 }}  // Aparece suavemente
+            className="text-center mb-8"
+          >
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              Os seus matches perfeitos!
+            </h2>
+            <p className="text-lg text-gray-600 mb-6">
+              Baseado nas suas respostas, encontrámos estes explicadores ideais para si.
+            </p>
+            <Button
+              variant="outline"
+              onClick={goBack}  // Volta ao questionário
+              className="mb-4"
             >
-              <Card className="p-6 h-full hover:shadow-xl transition-all duration-200 border-0 bg-white/80 backdrop-blur-sm group">
-                {/* Cabeçalho do Tutor */}
-                <div className="text-center mb-4">
-                  <img
-                    src={tutor.profilePicture}
-                    alt={tutor.name}
-                    className="w-20 h-20 rounded-full mx-auto mb-3 object-cover ring-4 ring-yellow-100 group-hover:ring-green-200 transition-all"
-                  />
-                  <h3 className="text-xl font-semibold text-gray-900 mb-1">{tutor.name}</h3>
-                  <div className="flex items-center justify-center space-x-1 mb-2">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <span className="text-sm font-medium text-gray-700">{tutor.rating}</span>
-                  </div>
-                  <div className="flex items-center justify-center space-x-4 text-sm text-gray-500 mb-3">
-                    <div className="flex items-center space-x-1">
-                      <MapPin className="h-4 w-4" />
-                      <span>{tutor.location}</span>
+              <ChevronLeft className="h-4 w-4 mr-2" />  {/* Ícone de seta para a esquerda */}
+              Voltar ao questionário
+            </Button>
+          </motion.div>
+
+          {/* Lista de tutores correspondentes */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {mockTutors.map((tutor, index) => (  // Percorre cada tutor da lista
+              <motion.div
+                key={tutor.id}  // Identifica cada elemento
+                initial={{ opacity: 0, y: 30 }}  // Começa invisível
+                animate={{ opacity: 1, y: 0 }}  // Anima para visível
+                transition={{ delay: index * 0.1 }}  // Pequeno atraso entre cada card
+              >
+                <Card className="p-6 h-full hover:shadow-lg transition-all duration-200 border-0 bg-white/80 backdrop-blur-sm">
+                  <div className="text-center mb-4">
+                    <img
+                      src={tutor.profilePicture}  // Mostra a foto do tutor
+                      alt={tutor.name}
+                      className="w-20 h-20 rounded-full mx-auto mb-3 object-cover"
+                    />
+                    <h3 className="text-xl font-semibold text-gray-900 mb-1">
+                      {tutor.name}  // Nome do tutor
+                    </h3>
+                    <p className="text-green-600 font-medium mb-2">{tutor.subject}</p>  // Disciplina
+                    <div className="flex items-center justify-center space-x-1 mb-3">
+                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />  // Ícone estrela
+                      <span className="text-sm font-medium text-gray-700">{tutor.rating}</span>  // Avaliação
                     </div>
-                    <div className="flex items-center space-x-1">
-                      <Clock className="h-4 w-4" />
-                      <span>{tutor.availability}</span>
-                    </div>
                   </div>
-                </div>
-
-                {/* Disciplinas */}
-                <div className="mb-4">
-                  <div className="flex flex-wrap gap-1 justify-center">
-                    {tutor.subjects?.slice(0, 3).map((subject) => (
-                      <span
-                        key={subject}
-                        className="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium"
-                      >
-                        {subject}
-                      </span>
-                    ))}
-                    {tutor.subjects && tutor.subjects.length > 3 && (
-                      <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
-                        +{tutor.subjects.length - 3} mais
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Biografia */}
-                <p className="text-gray-600 text-sm mb-4 line-clamp-3">{tutor.bio}</p>
-
-                {/* Ações */}
-                <div className="space-y-2 mt-auto">
-                  <Link to={`/profile/${tutor.id}`}>
-                    <Button variant="outline" className="w-full group-hover:border-green-400 transition-colors">
+                  
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-3">
+                    {tutor.bio}  // Pequena biografia
+                  </p>
+                  
+                  <div className="space-y-2">
+                    <Button
+                      onClick={() => navigate(`/profile/${tutor.id}`)}  // Abre o perfil do tutor
+                      variant="outline"
+                      className="w-full"
+                    >
                       Ver perfil completo
                     </Button>
-                  </Link>
+                    <Button
+                      onClick={() => handleContactTutor(tutor.email, tutor.name)}  // Abre o e-mail
+                      className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
+                    >
+                      <Mail className="h-4 w-4 mr-2" />  // Ícone de e-mail
+                      Contactar
+                    </Button>
+                  </div>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
 
-                  <Button
-                    onClick={() => handleContactTutor(tutor.email, tutor.name)}
-                    className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
-                  >
-                    <Mail className="h-4 w-4 mr-2" />
-                    Contactar
-                  </Button>
-                </div>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* ----------------- ESTADO VAZIO ----------------- */}
-        {filteredTutors.length === 0 && (
+          {/* Secção final com botão para explorar mais */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center py-12"
+            transition={{ delay: 0.5 }}
+            className="text-center"
           >
-            <div className="text-gray-400 mb-4">
-              <Search className="h-16 w-16 mx-auto" />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Nenhum explicador encontrado</h3>
-            <p className="text-gray-600 mb-4">
-              Tente ajustar os seus critérios de pesquisa ou explore todas as disciplinas
-            </p>
+            <p className="text-gray-600 mb-4">Quer ver mais opções?</p>
             <Button
-              onClick={() => {
-                setSearchTerm('')
-                setSelectedSubject('all')
-              }}
+              onClick={() => navigate('/marketplace')}  // Vai para a página de todos os explicadores
+              size="lg"
               variant="outline"
+              className="border-yellow-400 text-yellow-600 hover:bg-yellow-50"
             >
-              Limpar filtros
+              Explorar todos os explicadores
             </Button>
           </motion.div>
-        )}
+        </div>
+      </div>
+    )
+  }
+
+  // Se ainda não terminou o questionário, mostra a pergunta atual
+  const question = questions[currentQuestion]
+  const progress = ((currentQuestion + 1) / questions.length) * 100  // Calcula a percentagem de progresso
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8">
+      <div className="max-w-4xl mx-auto px-4">
+        {/* Barra de progresso do questionário */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <div className="bg-white rounded-full h-3 overflow-hidden shadow-sm">
+            <motion.div
+              className="h-full bg-gradient-to-r from-blue-400 to-green-400"
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}  // Aumenta conforme as perguntas respondidas
+              transition={{ duration: 0.5, ease: "easeOut" }}
+            />
+          </div>
+          <p className="text-sm text-gray-600 mt-2 text-center">
+            Pergunta {currentQuestion + 1} de {questions.length}  // Mostra o número da pergunta
+          </p>
+        </motion.div>
+
+        {/* Área da pergunta atual */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentQuestion}
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -50 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Card className="p-8 shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+              <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center">
+                {question.title}  // Mostra o título da pergunta
+              </h2>
+
+              <div className="space-y-4">
+                {question.options.map((option, index) => (  // Mostra todas as opções de resposta
+                  <motion.button
+                    key={option.value}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    onClick={() => handleAnswer(question.id, option.value)}  // Quando o utilizador clica, guarda a resposta
+                    className="w-full p-4 text-left border-2 border-gray-200 rounded-2xl hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-lg text-gray-700 group-hover:text-blue-700">
+                        {option.label}  // Texto da opção
+                      </span>
+                      <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-blue-500 transform group-hover:translate-x-1 transition-all" />  // Ícone decorativo
+                    </div>
+                  </motion.button>
+                ))}
+              </div>
+
+              <div className="flex justify-between mt-8">
+                <Button
+                  variant="outline"
+                  onClick={goBack}  // Botão para voltar à pergunta anterior
+                  disabled={currentQuestion === 0}  // Desativado na primeira pergunta
+                  className="flex items-center space-x-2"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  <span>Anterior</span>
+                </Button>
+
+                {/* Indicação visual de que a pergunta foi respondida */}
+                <div className="text-sm text-gray-500">
+                  {answers[`question_${question.id}_answer`] && (
+                    <div className="flex items-center space-x-2 text-blue-600">
+                      <Check className="h-4 w-4" />
+                      <span>Respondido</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   )
