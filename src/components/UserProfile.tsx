@@ -18,82 +18,92 @@
 
 //-----------------CODE-----------------
 
-import React, { useEffect, useState } from 'react' // Importa React e hooks de estado e efeito
-import { useNavigate } from 'react-router-dom' // Hook para navegar entre páginas
-import { motion } from 'framer-motion' // Para animações suaves
-import { Card } from './ui/card' // Componente visual de cartão
+//-----------------IMPORTAÇÕES-----------------
+import React, { useEffect, useState } from 'react' // React e hooks para estado e efeitos
+import { useNavigate } from 'react-router-dom' // Para navegação entre páginas
+import { motion } from 'framer-motion' // Biblioteca de animações
+import { Card } from './ui/card' // Componente de cartão estilizado
 import { Button } from './ui/button' // Botão estilizado
-import { useAuth } from '../contexts/AuthContext' // Informação do utilizador logado
+import { useAuth } from '../contexts/AuthContext' // Contexto de autenticação do utilizador
 import { supabase, TutorData } from '../lib/supabase' // Supabase e tipo de dados do tutor
 import { User, Edit, BookOpen, Mail } from 'lucide-react' // Ícones usados na interface
 
+//-----------------COMPONENTE PRINCIPAL-----------------
 export const UserProfile = () => {
-  const { user, loading: authLoading } = useAuth() // Pega informações do utilizador e se está carregando autenticação
-  const navigate = useNavigate() // Função para navegar para outra página
-  const [tutorProfile, setTutorProfile] = useState<TutorData | null>(null) // Estado para armazenar perfil de tutor
-  const [loading, setLoading] = useState(true) // Estado para controlar carregamento do perfil
+  // Pegando informações do utilizador logado e estado de carregamento da autenticação
+  const { user, loading: authLoading } = useAuth()
+  const navigate = useNavigate() // Hook para navegação
+  const [tutorProfile, setTutorProfile] = useState<TutorData | null>(null) // Perfil de tutor (null se não existir)
+  const [loading, setLoading] = useState(true) // Controle de carregamento do perfil
 
-  // useEffect executa ao carregar o componente ou quando user/authLoading muda
+  //-----------------EFFECT PARA CARREGAR PERFIL-----------------
   useEffect(() => {
-    if (!authLoading && !user) { // Se autenticação terminou e não há utilizador logado
-      navigate('/login') // Redireciona para login
+    if (!authLoading && !user) {
+      // Se autenticação terminou e não há utilizador logado
+      navigate('/login') // Redireciona para a página de login
       return
     }
 
-    if (user) { // Se houver utilizador logado
-      loadTutorProfile() // Carrega perfil de tutor
+    if (user) {
+      // Se há utilizador logado, busca perfil de tutor
+      loadTutorProfile()
     }
   }, [user, authLoading, navigate])
 
-  // Função para carregar perfil de tutor do Supabase
+  //-----------------FUNÇÃO PARA CARREGAR PERFIL DE TUTOR-----------------
   const loadTutorProfile = async () => {
-    if (!user) return // Se não houver utilizador, não faz nada
+    if (!user) return // Proteção caso não haja utilizador
 
     try {
+      // Requisição ao Supabase para obter perfil do tutor
       const { data, error } = await supabase
-        .from('tutores') // Tabela 'tutores'
+        .from('tutores') // Tabela de tutores
         .select('*') // Seleciona todos os campos
         .eq('user_id', user.id) // Filtra pelo id do utilizador logado
-        .single() // Espera retornar apenas um resultado
+        .single() // Espera apenas um resultado
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 significa "sem linhas retornadas"
-        throw error // Se houver outro erro, lança exceção
+      // Verifica se ocorreu erro diferente de "sem linhas retornadas"
+      if (error && error.code !== 'PGRST116') {
+        throw error // Lança exceção para outros erros
       }
 
-      setTutorProfile(data || null) // Define perfil do tutor ou null
+      setTutorProfile(data || null) // Atualiza estado com dados do tutor ou null
     } catch (error) {
-      console.error('Error loading tutor profile:', error) // Mostra erro no console
+      console.error('Error loading tutor profile:', error) // Log de erro
     } finally {
-      setLoading(false) // Finaliza estado de carregamento
+      setLoading(false) // Finaliza carregamento
     }
   }
 
-  // Mostra tela de carregamento enquanto autenticação ou perfil estão carregando
+  //-----------------TELA DE CARREGAMENTO-----------------
   if (authLoading || loading) {
+    // Exibe skeleton screen enquanto autenticação ou perfil estão carregando
     return (
       <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8">
         <div className="max-w-4xl mx-auto px-4">
           <div className="animate-pulse"> {/* Animação de carregamento */}
-            <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
-            <div className="h-64 bg-gray-200 rounded mb-4"></div>
+            <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div> {/* Cabeçalho */}
+            <div className="h-64 bg-gray-200 rounded mb-4"></div> {/* Cartão principal */}
           </div>
         </div>
       </div>
     )
   }
 
-  if (!user) { // Se não houver utilizador logado
-    return null // Não mostra nada
+  // Se não houver utilizador logado, não mostra nada
+  if (!user) {
+    return null
   }
 
-  // Renderização principal do perfil do utilizador
+  //-----------------RENDERIZAÇÃO PRINCIPAL-----------------
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8">
       <div className="max-w-4xl mx-auto px-4">
-        {/* Cabeçalho da página */}
+
+        {/*-----------------CABEÇALHO-----------------*/}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 20 }} // Animação inicial
+          animate={{ opacity: 1, y: 0 }}  // Animação final
           className="mb-8"
         >
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -104,7 +114,7 @@ export const UserProfile = () => {
           </p>
         </motion.div>
 
-        {/* Cartão com informações do utilizador */}
+        {/*-----------------CARTÃO DE INFORMAÇÕES DO UTILIZADOR-----------------*/}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -112,45 +122,52 @@ export const UserProfile = () => {
         >
           <Card className="p-6 shadow-lg border-0 bg-white/80 backdrop-blur-sm mb-6">
             <div className="flex items-center space-x-4 mb-4">
+              {/* Avatar do utilizador */}
               <div className="w-16 h-16 bg-gradient-to-r from-yellow-400 to-green-400 rounded-full flex items-center justify-center">
-                <User className="h-8 w-8 text-white" /> {/* Ícone de utilizador */}
+                <User className="h-8 w-8 text-white" />
               </div>
               <div>
+                {/* Nome ou email do utilizador */}
                 <h2 className="text-xl font-semibold text-gray-900">
-                  {user.user_metadata?.name || user.email?.split('@')[0] || 'Utilizador'} {/* Nome ou email do utilizador */}
+                  {user.user_metadata?.name || user.email?.split('@')[0] || 'Utilizador'}
                 </h2>
+                {/* Email do utilizador */}
                 <div className="flex items-center space-x-2 text-gray-600">
-                  <Mail className="h-4 w-4" /> {/* Ícone de email */}
-                  <span>{user.email}</span> {/* Mostra email */}
+                  <Mail className="h-4 w-4" />
+                  <span>{user.email}</span>
                 </div>
               </div>
             </div>
           </Card>
         </motion.div>
 
-        {/* Perfil do tutor, se existir */}
+        {/*-----------------PERFIL DE TUTOR-----------------*/}
         {tutorProfile ? (
+          // Caso exista perfil de tutor
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
             <Card className="p-6 shadow-lg border-0 bg-white/80 backdrop-blur-sm mb-6">
+              {/* Cabeçalho do cartão de tutor */}
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <BookOpen className="h-5 w-5 mr-2 text-green-600" /> {/* Ícone de livro */}
+                  <BookOpen className="h-5 w-5 mr-2 text-green-600" /> {/* Ícone */}
                   Perfil de Explicador
                 </h3>
+                {/* Botão para editar perfil */}
                 <Button
-                  onClick={() => navigate(`/profile/${tutorProfile.id}`)} // Navega para edição do perfil
+                  onClick={() => navigate(`/profile/${tutorProfile.id}`)}
                   variant="outline"
                   size="sm"
                 >
-                  <Edit className="h-4 w-4 mr-2" /> {/* Ícone de editar */}
+                  <Edit className="h-4 w-4 mr-2" />
                   Editar perfil
                 </Button>
               </div>
-              
+
+              {/* Área de expertise e disciplinas */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <p className="text-sm text-gray-600">Área de expertise</p>
@@ -164,12 +181,13 @@ export const UserProfile = () => {
                 <div>
                   <p className="text-sm text-gray-600">Disciplinas</p>
                   <p className="font-medium text-gray-900">
-                    {tutorProfile.subjects?.length ? tutorProfile.subjects.join(', ') : 'A definir'} {/* Lista de disciplinas */}
+                    {tutorProfile.subjects?.length ? tutorProfile.subjects.join(', ') : 'A definir'}
                   </p>
                 </div>
               </div>
-              
-              {tutorProfile.bio && ( // Mostra biografia se existir
+
+              {/* Biografia do tutor */}
+              {tutorProfile.bio && (
                 <div className="mt-4">
                   <p className="text-sm text-gray-600 mb-1">Biografia</p>
                   <p className="text-gray-900">{tutorProfile.bio}</p>
@@ -177,7 +195,8 @@ export const UserProfile = () => {
               )}
             </Card>
           </motion.div>
-        ) : ( // Se não houver perfil de tutor
+        ) : (
+          // Caso não exista perfil de tutor
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -192,7 +211,7 @@ export const UserProfile = () => {
                 Quer começar a dar explicações? Complete o questionário para criar o seu perfil.
               </p>
               <Button
-                onClick={() => navigate('/tutor-questionnaire')} // Botão para criar perfil
+                onClick={() => navigate('/tutor-questionnaire')}
                 className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
               >
                 Criar perfil de explicador
@@ -201,7 +220,7 @@ export const UserProfile = () => {
           </motion.div>
         )}
 
-        {/* Acções rápidas do utilizador */}
+        {/*-----------------ACÇÕES RÁPIDAS-----------------*/}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
@@ -212,16 +231,18 @@ export const UserProfile = () => {
               Acções rápidas
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Botão para explorar outros explicadores */}
               <Button
-                onClick={() => navigate('/marketplace')} // Explorar outros explicadores
+                onClick={() => navigate('/marketplace')}
                 variant="outline"
                 className="justify-start"
               >
                 <BookOpen className="h-4 w-4 mr-2" />
                 Explorar explicadores
               </Button>
+              {/* Botão para encontrar um explicador */}
               <Button
-                onClick={() => navigate('/student-questionnaire')} // Encontrar um explicador
+                onClick={() => navigate('/student-questionnaire')}
                 variant="outline"
                 className="justify-start"
               >
@@ -231,7 +252,8 @@ export const UserProfile = () => {
             </div>
           </Card>
         </motion.div>
+
       </div>
     </div>
   )
-} 
+}
