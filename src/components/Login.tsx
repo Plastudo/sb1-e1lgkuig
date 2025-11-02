@@ -34,11 +34,14 @@ export const Login = () => {  // Define o componente funcional Login
   return (
     <>
       {/* Componente AuthModal responsável por autenticação */}
-      <AuthModal
-        onComplete={handleComplete} {/* Função chamada quando o login for concluído */}
-        title="Bem-vindo de volta" {/* Título personalizado do modal */}
-        subtitle="Entre na sua conta para continuar" {/* Subtítulo personalizado do modal */}
-      />
+<AuthModal
+  onComplete={handleComplete}
+  // Título personalizado do modal
+  title="Bem-vindo de volta"
+  // Subtítulo personalizado do modal
+  subtitle="Entre na sua conta para continuar"
+/>
+
     </>
   )
 }
