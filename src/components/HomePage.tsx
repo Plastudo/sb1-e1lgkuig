@@ -20,114 +20,125 @@ import { GraduationCap, Search, BookOpen, Users, Star, ArrowRight } from 'lucide
 
 export const HomePage = () => {  // Declara um componente funcional chamado 'HomePage'
   return (  // Começa a descrição do que será mostrado no ecrã
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50">  // Contém toda a página; define altura mínima e fundo com gradiente
-      {/* Hero Section */}  // Comentário JSX: secção principal de destaque
-      <section className="relative overflow-hidden py-20 sm:py-32">  // Secção com espaçamento grande; 'relative' permite posicionar elementos dentro dela
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">  // Centraliza o conteúdo e limita a largura máxima
-          <div className="mx-auto max-w-2xl text-center">  // Caixa centralizada para o texto principal, com alinhamento ao centro
-            <motion.div  // Bloco animado (aparece com uma transição)
-              initial={{ y: 20, opacity: 0 }}  // Começa um pouco abaixo e invisível
-              animate={{ y: 0, opacity: 1 }}  // Move-se para o lugar e fica visível
-              transition={{ duration: 0.6 }}  // Duração da animação: 0.6 segundos
+    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50">
+      {/* Contém toda a página; define altura mínima e fundo com gradiente */}
+
+      {/* Hero Section */}
+      <section className="relative overflow-hidden py-20 sm:py-32">
+        {/* Secção com espaçamento grande; 'relative' permite posicionar elementos dentro dela */}
+
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          {/* Centraliza o conteúdo e limita a largura máxima */}
+
+          <div className="mx-auto max-w-2xl text-center">
+            {/* Caixa centralizada para o texto principal, com alinhamento ao centro */}
+
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.6 }}
             >
-              <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl mb-6">  // Título principal grande e em negrito
-                Encontre o{' '}  // Texto com um espaço explícito
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-600 to-green-600">  // Parte do título com efeito de gradiente no texto
+              <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl mb-6">
+                {/* Título principal grande e em negrito */}
+                Encontre o{' '}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-600 to-green-600">
+                  {/* Parte do título com efeito de gradiente no texto */}
                   explicador perfeito
-                </span>{' '}  // Fecha o span e mantém espaço
+                </span>{' '}
                 para si
               </h1>
-              <p className="text-lg leading-8 text-gray-600 mb-10">  // Parágrafo explicativo abaixo do título
+              <p className="text-lg leading-8 text-gray-600 mb-10">
+                {/* Parágrafo explicativo abaixo do título */}
                 Conectamos estudantes com os melhores explicadores de Portugal. 
                 Aprenda ao seu ritmo, no seu tempo, com quem entende as suas necessidades.
               </p>
             </motion.div>
 
-            <motion.div  // Bloco animado para os botões principais
-              initial={{ y: 30, opacity: 0 }}  // Inicia mais abaixo e invisível
-              animate={{ y: 0, opacity: 1 }}  // Sobe e torna-se visível
-              transition={{ duration: 0.6, delay: 0.2 }}  // Pequeno atraso para aparecer depois do título
-              className="flex flex-col sm:flex-row gap-4 justify-center max-w-lg mx-auto"  // Layout responsivo: empilha em telemóveis, alinha em linha em ecrãs maiores
+            <motion.div
+              initial={{ y: 30, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="flex flex-col sm:flex-row gap-4 justify-center max-w-lg mx-auto"
             >
-              <Link to="/student-questionnaire" className="flex-1">  // Link que leva ao questionário para estudantes
+              {/* Layout responsivo: empilha em telemóveis, alinha em linha em ecrãs maiores */}
+
+              <Link to="/student-questionnaire" className="flex-1">
+                {/* Link que leva ao questionário para estudantes */}
                 <Button 
                   size="lg" 
-                  className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 group"  // Estilos do botão (tamanho, cores, transições)
+                  className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 group"
                 >
-                  <Search className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />  // Ícone de pesquisa à esquerda do texto do botão
-                  Encontrar explicador ideal  // Texto do botão
-                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />  // Ícone de seta à direita que se move ao passar o rato
+                  <Search className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
+                  {/* Ícone de pesquisa à esquerda do texto do botão */}
+                  Encontrar explicador ideal
+                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  {/* Ícone de seta à direita que se move ao passar o rato */}
                 </Button>
               </Link>
               
-              <Link to="/tutor-questionnaire" className="flex-1">  // Link que leva ao formulário para quem quer ser explicador
+              <Link to="/tutor-questionnaire" className="flex-1">
+                {/* Link que leva ao formulário para quem quer ser explicador */}
                 <Button 
                   size="lg" 
-                  variant="outline"  // Variante do botão com contorno
-                  className="w-full border-2 border-green-500 text-green-600 hover:bg-green-500 hover:text-white shadow-lg hover:shadow-xl transition-all duration-200 group"  // Estilos do botão (bordas, cores, efeitos)
+                  variant="outline"
+                  className="w-full border-2 border-green-500 text-green-600 hover:bg-green-500 hover:text-white shadow-lg hover:shadow-xl transition-all duration-200 group"
                 >
-                  <GraduationCap className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />  // Ícone de chapéu de formatura
-                  Quero ser explicador  // Texto do botão
-                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />  // Ícone de seta com pequeno movimento ao passar o rato
+                  <GraduationCap className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
+                  {/* Ícone de chapéu de formatura */}
+                  Quero ser explicador
+                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                  {/* Ícone de seta com pequeno movimento ao passar o rato */}
                 </Button>
               </Link>
             </motion.div>
           </div>
         </div>
 
-        {/* Floating elements */}  // Comentário JSX: elementos decorativos que parecem flutuar
+        {/* Floating elements */}
         <motion.div
-          animate={{ 
-            y: [0, -10, 0],  // Faz um pequeno movimento para cima e volta
-            rotate: [0, 5, 0]  // Faz uma rotação suave ligeira
-          }}
-          transition={{ 
-            duration: 6,  // Duração do ciclo de animação
-            repeat: Infinity,  // Repete para sempre
-            ease: "easeInOut"  // Movimento suave de entrada/saída
-          }}
-          className="absolute top-20 left-10 opacity-20"  // Posiciona o ícone de forma absoluta e com baixa opacidade
+          animate={{ y: [0, -10, 0], rotate: [0, 5, 0] }}
+          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute top-20 left-10 opacity-20"
         >
-          <BookOpen className="h-12 w-12 text-yellow-500" />  // Ícone de livro decorativo
+          {/* Ícone de livro decorativo */}
+          <BookOpen className="h-12 w-12 text-yellow-500" />
         </motion.div>
         
         <motion.div
-          animate={{ 
-            y: [0, 10, 0],  // Movimento ligeiramente diferente (baixo e volta)
-            rotate: [0, -5, 0]  // Rotação no sentido oposto
-          }}
-          transition={{ 
-            duration: 8,  // Ciclo mais lento
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: 2  // Este começa com atraso para variar os movimentos
-          }}
-          className="absolute top-32 right-16 opacity-20"  // Posição à direita e baixa opacidade
+          animate={{ y: [0, 10, 0], rotate: [0, -5, 0] }}
+          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+          className="absolute top-32 right-16 opacity-20"
         >
-          <Users className="h-16 w-16 text-green-500" />  // Ícone de utilizadores (pessoas)
+          {/* Ícone de utilizadores (pessoas) */}
+          <Users className="h-16 w-16 text-green-500" />
         </motion.div>
       </section>
 
-      {/* Features Section */}  // Secção que explica como o serviço funciona, em passos
-      <section className="py-16 bg-white/60 backdrop-blur-sm">  // Fundo semi-transparente com ligeiro desfoque
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">  // Controlo de largura e espaçamento
+      {/* Features Section */}
+      <section className="py-16 bg-white/60 backdrop-blur-sm">
+        {/* Fundo semi-transparente com ligeiro desfoque */}
+
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <motion.div
-            initial={{ y: 20, opacity: 0 }}  // Animação de entrada
-            whileInView={{ y: 0, opacity: 1 }}  // Aparece quando entra na vista do utilizador
-            viewport={{ once: true }}  // Só anima uma vez
-            transition={{ duration: 0.6 }}  // Duração da animação
-            className="mx-auto max-w-2xl text-center mb-16"  // Caixa centralizada com margem inferior
+            initial={{ y: 20, opacity: 0 }}
+            whileInView={{ y: 0, opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="mx-auto max-w-2xl text-center mb-16"
           >
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl mb-4">  // Subtítulo grande
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl mb-4">
+              {/* Subtítulo grande */}
               Como funciona?
             </h2>
-            <p className="text-lg text-gray-600">  // Texto explicativo curto
+            <p className="text-lg text-gray-600">
+              {/* Texto explicativo curto */}
               Um processo simples e eficaz para encontrar o explicador ideal
             </p>
           </motion.div>
 
-          <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 lg:grid-cols-3">  // Grelha responsiva: 1 coluna em telemóvel, 3 em ecrãs grandes
-            {[  // Array de objetos com os passos/features mostrados na página
+          <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 lg:grid-cols-3">
+            {/* Grelha responsiva: 1 coluna em telemóvel, 3 em ecrãs grandes */}
+            {[
               {
                 icon: Search,
                 title: "1. Responda ao questionário",
@@ -143,22 +154,25 @@ export const HomePage = () => {  // Declara um componente funcional chamado 'Hom
                 title: "3. Comece a aprender",
                 description: "Entre em contacto diretamente e comece a sua jornada de aprendizagem personalizada."
               }
-            ].map((feature, index) => (  // Para cada objecto no array, cria um bloco visual
+            ].map((feature, index) => (
               <motion.div
-                key={feature.title}  // Chave única para otimizar a renderização (ajuda o React a identificar cada bloco)
-                initial={{ y: 20, opacity: 0 }}  // Efeito de entrada
-                whileInView={{ y: 0, opacity: 1 }}  // Mostra quando estiver visível no ecrã
-                viewport={{ once: true }}  // Anima apenas a primeira vez
-                transition={{ duration: 0.6, delay: index * 0.1 }}  // Adiciona um pequeno atraso sequencial entre os itens
-                className="text-center"  // Alinha o conteúdo ao centro
+                key={feature.title}
+                initial={{ y: 20, opacity: 0 }}
+                whileInView={{ y: 0, opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+                className="text-center"
               >
-                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-yellow-100 to-green-100">  // Caixa circular com gradiente para o ícone
-                  <feature.icon className="h-8 w-8 text-green-600" />  // Mostra o ícone definido no objecto (Search, Users, Star)
+                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-yellow-100 to-green-100">
+                  {/* Caixa circular com gradiente para o ícone */}
+                  <feature.icon className="h-8 w-8 text-green-600" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">  // Título do passo
+                <h3 className="text-xl font-semibold text-gray-900 mb-3">
+                  {/* Título do passo */}
                   {feature.title}
                 </h3>
-                <p className="text-gray-600">  // Descrição do passo
+                <p className="text-gray-600">
+                  {/* Descrição do passo */}
                   {feature.description}
                 </p>
               </motion.div>
@@ -167,34 +181,41 @@ export const HomePage = () => {  // Declara um componente funcional chamado 'Hom
         </div>
       </section>
 
-      {/* CTA Section */}  // Seção final com chamada para ação (convidar o utilizador a explorar o marketplace)
-      <section className="py-16">  // Espaçamento vertical
+      {/* CTA Section */}
+      <section className="py-16">
+        {/* Seção final com chamada para ação (CTA) */}
+
         <motion.div
-          initial={{ y: 20, opacity: 0 }}  // Animação de entrada
-          whileInView={{ y: 0, opacity: 1 }}  // Aparece quando entra na vista
+          initial={{ y: 20, opacity: 0 }}
+          whileInView={{ y: 0, opacity: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="mx-auto max-w-4xl px-6 text-center"  // Caixa centralizada para o conteúdo da CTA
+          className="mx-auto max-w-4xl px-6 text-center"
         >
-          <div className="rounded-3xl bg-gradient-to-r from-yellow-100 via-green-100 to-blue-100 p-8 sm:p-12 shadow-xl">  // Caixa com cantos arredondados, gradiente e sombra
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">  // Pergunta incentivadora
+          <div className="rounded-3xl bg-gradient-to-r from-yellow-100 via-green-100 to-blue-100 p-8 sm:p-12 shadow-xl">
+            {/* Caixa com cantos arredondados, gradiente e sombra */}
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              {/* Pergunta incentivadora */}
               Pronto para começar?
             </h2>
-            <p className="text-lg text-gray-600 mb-8">  // Mensagem que reforça a confiança
+            <p className="text-lg text-gray-600 mb-8">
+              {/* Mensagem que reforça a confiança */}
               Junte-se a milhares de estudantes que já encontraram o seu explicador ideal
             </p>
-            <Link to="/marketplace">  // Link para explorar os explicadores disponíveis
+            <Link to="/marketplace">
+              {/* Link para explorar os explicadores disponíveis */}
               <Button 
                 size="lg" 
-                className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white shadow-lg hover:shadow-xl transition-all duration-200"  // Estilos do botão principal da CTA
+                className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white shadow-lg hover:shadow-xl transition-all duration-200"
               >
-                Explorar explicadores  // Texto do botão
-                <ArrowRight className="ml-2 h-4 w-4" />  // Pequeno ícone de seta à direita do texto
+                Explorar explicadores
+                <ArrowRight className="ml-2 h-4 w-4" />
+                {/* Pequeno ícone de seta à direita do texto */}
               </Button>
             </Link>
           </div>
         </motion.div>
       </section>
     </div>
-  )  // Fecha o return
-}  // Fecha o componente HomePage
+  )
+}
