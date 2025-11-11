@@ -28,8 +28,8 @@ import { supabase, TutorData } from '../lib/supabase' // Supabase e tipo de dado
 import { Search, Star, Mail, MapPin, Clock } from 'lucide-react' // Ícones usados na interface
 
 export const Marketplace = () => {
-  const [tutors, setTutors] = useState(mockTutors) // Estado para armazenar todos os tutores
-  const [filteredTutors, setFilteredTutors] = useState(mockTutors) // Estado para tutores filtrados
+  const [tutors, setTutors] = useState<TutorData[]>([])
+  const [filteredTutors, setFilteredTutors] = useState<TutorData[]>([])
   const [searchTerm, setSearchTerm] = useState('') // Estado para texto de pesquisa
   const [selectedSubject, setSelectedSubject] = useState('all') // Estado para disciplina selecionada
   
