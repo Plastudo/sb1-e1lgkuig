@@ -27,97 +27,35 @@ import { Input } from './ui/input' // Campo de input estilizado
 import { supabase, TutorData } from '../lib/supabase' // Supabase e tipo de dados do tutor
 import { Search, Star, Mail, MapPin, Clock } from 'lucide-react' // Ícones usados na interface
 
-// Mock data para demonstração
-const mockTutors: (TutorData & { rating: number; location: string; availability: string; profilePicture: string })[] = [ // Array de tutores fictícios
-  {
-    id: '1',
-    user_id: 'mock-1',
-    name: 'Ana Silva',
-    email: 'ana.silva@email.com',
-    question_1_answer: 'matematica',
-    bio: 'Professora experiente com 8 anos de ensino. Especializada em álgebra, cálculo e estatística. Métodos personalizados para cada aluno.',
-    subjects: ['Matemática', 'Álgebra', 'Cálculo'],
-    rating: 4.9,
-    location: 'Lisboa',
-    availability: 'Manhãs e tardes',
-    profilePicture: 'https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&fit=crop'
-  },
-  {
-    id: '2',
-    user_id: 'mock-2',
-    name: 'João Santos',
-    email: 'joao.santos@email.com',
-    question_1_answer: 'ciencias',
-    bio: 'Engenheiro químico com paixão pelo ensino. Experiência em preparação para exames nacionais e universitários.',
-    subjects: ['Física', 'Química', 'Ciências'],
-    rating: 4.8,
-    location: 'Porto',
-    availability: 'Tardes e noites',
-    profilePicture: 'https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&fit=crop'
-  },
-  {
-    id: '3',
-    user_id: 'mock-3',
-    name: 'Maria Costa',
-    email: 'maria.costa@email.com',
-    question_1_answer: 'ciencias',
-    bio: 'Doutora em biologia molecular. Especializada em biologia celular e genética. Abordagem científica e didática.',
-    subjects: ['Biologia', 'Genética', 'Ciências Naturais'],
-    rating: 4.9,
-    location: 'Braga',
-    availability: 'Flexível',
-    profilePicture: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&fit=crop'
-  },
-  {
-    id: '4',
-    user_id: 'mock-4',
-    name: 'Pedro Oliveira',
-    email: 'pedro.oliveira@email.com',
-    question_1_answer: 'linguas',
-    bio: 'Professor de português e literatura. Mestre em linguística aplicada. Preparação para exames e apoio escolar.',
-    subjects: ['Português', 'Literatura', 'Redação'],
-    rating: 4.7,
-    location: 'Coimbra',
-    availability: 'Manhãs',
-    profilePicture: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&fit=crop'
-  },
-  {
-    id: '5',
-    user_id: 'mock-5',
-    name: 'Sofia Mendes',
-    email: 'sofia.mendes@email.com',
-    question_1_answer: 'humanas',
-    bio: 'Historiadora e professora. Especialista em história contemporânea e metodologia de estudo. Aulas dinâmicas e interativas.',
-    subjects: ['História', 'Geografia', 'Filosofia'],
-    rating: 4.8,
-    location: 'Aveiro',
-    availability: 'Tardes',
-    profilePicture: 'https://images.pexels.com/photos/1181519/pexels-photo-1181519.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&fit=crop'
-  },
-  {
-    id: '6',
-    user_id: 'mock-6',
-    name: 'Carlos Ferreira',
-    email: 'carlos.ferreira@email.com',
-    question_1_answer: 'linguas',
-    bio: 'Professor nativo de inglês e francês. Certificações internacionais. Foco em conversação e preparação para certificados.',
-    subjects: ['Inglês', 'Francês', 'Conversação'],
-    rating: 4.9,
-    location: 'Faro',
-    availability: 'Noites e fins de semana',
-    profilePicture: 'https://images.pexels.com/photos/1040881/pexels-photo-1040881.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&fit=crop'
-  }
-]
-
 export const Marketplace = () => {
   const [tutors, setTutors] = useState(mockTutors) // Estado para armazenar todos os tutores
   const [filteredTutors, setFilteredTutors] = useState(mockTutors) // Estado para tutores filtrados
   const [searchTerm, setSearchTerm] = useState('') // Estado para texto de pesquisa
   const [selectedSubject, setSelectedSubject] = useState('all') // Estado para disciplina selecionada
+  
+// Função para carregar tutores do Supabase
+  const loadTutors = async () => {
+    try {
+      const { data, error } = await supabase
+        .from<TutorData>('tutores') // Identificação da tabela
+        .select('*')
+
+      if (error) {
+        console.error('Erro ao carregar tutores:', error)
+        return
+      }
+
+      if (data) {
+        setTutors(data)
+        setFilteredTutors(data)
+      }
+    } catch (err) {
+      console.error('Erro inesperado ao carregar tutores:', err)
+    }
+  }
 
   useEffect(() => {
-    // Futuramente aqui carregaremos os tutores reais do Supabase
-    // loadTutors()
+    loadTutors() // Carrega os tutores ao montar o componente
   }, [])
 
   useEffect(() => { // Filtra tutores quando searchTerm, selectedSubject ou tutors mudam
