@@ -217,7 +217,7 @@ export const Marketplace = () => {
 
                 <div className="space-y-2 mt-auto">
                   {/* Link para perfil completo */}
-                  <Link to={`/profile/${tutor.id}`}>
+                  <Link to={`/TutorProfile/${tutor.id}`}>
                     <Button
                       variant="outline"
                       className="w-full group-hover:border-green-400 transition-colors"
