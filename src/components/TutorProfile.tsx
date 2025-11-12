@@ -54,7 +54,7 @@ type ExtendedTutorData = TutorData & {
   availability: string     // Disponibilidade de horários
   experience: string       // Experiência profissional
   education: string        // Formação académica
-  profilePicture: string   // URL da foto do tutor
+  profile_picture: string   // URL da foto do tutor
   hourlyRate: string       // Preço por hora
   totalStudents: number    // Total de alunos atendidos
   successRate: string      // Taxa de sucesso
