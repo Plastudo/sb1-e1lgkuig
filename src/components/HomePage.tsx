@@ -147,7 +147,7 @@ export const HomePage = () => {  // Declara um componente funcional chamado 'Hom
               {
                 icon: Users,
                 title: "2. Encontre matches perfeitos",
-                description: "O nosso algoritmo conecta-o com os explicadores mais adequados ao seu perfil."
+                description: "Ajudamos-te a encontrar o explicador ideal para ti"
               },
               {
                 icon: Star,
