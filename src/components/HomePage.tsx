@@ -11,48 +11,70 @@
 //Apresenta uma secção de funcionalidades explicando em três passos como o serviço funciona: responder ao questionário, encontrar matches perfeitos e começar a aprender, cada passo com ícone, título e descrição animados.
 //Finaliza com uma secção de chamada para ação (CTA), incentivando o utilizador a explorar o marketplace de explicadores, com botão destacado e animado.
 
-//---------CODE----------------
-import React from 'react'  // Importa a biblioteca React, necessária para criar componentes de interface
+import React, { useEffect, useState } from 'react'  // Importa a biblioteca React e hooks necessários
 import { Link } from 'react-router-dom'  // Importa 'Link' para navegar entre páginas sem recarregar o site
 import { motion } from 'framer-motion'  // Importa 'motion' para criar animações simples e fluidas
 import { Button } from './ui/button'  // Importa um componente de botão personalizado do projeto
 import { GraduationCap, Search, BookOpen, Users, Star, ArrowRight } from 'lucide-react'  // Importa vários ícones prontos a usar
 
 export const HomePage = () => {  // Declara um componente funcional chamado 'HomePage'
+  const [activeSection, setActiveSection] = useState(0); // Estado para controlar qual secção está visível
+
+  // 👇 ADDED: Observa as secções e atualiza o indicador ativo
+  useEffect(() => {
+    const sections = document.querySelectorAll("section");
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveSection(Array.from(sections).indexOf(entry.target));
+          }
+        });
+      },
+      { threshold: 0.6 }
+    );
+    sections.forEach((sec) => observer.observe(sec));
+    return () => observer.disconnect();
+  }, []);
+
   return (  // Começa a descrição do que será mostrado no ecrã
     <div 
-      className="h-screen overflow-y-scroll snap-y snap-mandatory scroll-smooth bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50"
+      className="h-screen overflow-y-scroll snap-y snap-mandatory scroll-smooth bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 relative"
       // 👇 ADDED: ativa o comportamento "scroll snap" vertical com rolagem suave
     >
       {/* Contém toda a página; define altura mínima e fundo com gradiente */}
 
+      {/* 👇 ADDED: Indicadores laterais de secção */}
+      <div className="fixed right-6 top-1/2 -translate-y-1/2 flex flex-col gap-4 z-50">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className={`h-3 w-3 rounded-full transition-all duration-300 ${
+              activeSection === i
+                ? "bg-green-600 scale-125"
+                : "bg-gray-400 opacity-50 hover:opacity-100"
+            }`}
+          />
+        ))}
+      </div>
+
       {/* Hero Section */}
-      <section className="relative overflow-hidden py-20 sm:py-32 h-screen snap-start">
-        {/* 👇 ADDED: h-screen + snap-start → esta secção ocupa o ecrã inteiro e “encaixa” ao fazer scroll */}
-        {/* Secção com espaçamento grande; 'relative' permite posicionar elementos dentro dela */}
-
+      <section className="relative overflow-hidden py-24 sm:py-40 h-screen snap-start">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          {/* Centraliza o conteúdo e limita a largura máxima */}
-
-          <div className="mx-auto max-w-2xl text-center">
-            {/* Caixa centralizada para o texto principal, com alinhamento ao centro */}
-
+          <div className="mx-auto max-w-3xl text-center">
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.6 }}
             >
-              <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-6xl mb-6">
-                {/* Título principal grande e em negrito */}
+              <h1 className="text-5xl font-extrabold tracking-tight text-gray-900 sm:text-7xl mb-8">
                 Encontre o{' '}
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-600 to-green-600">
-                  {/* Parte do título com efeito de gradiente no texto */}
                   explicador perfeito
                 </span>{' '}
                 para si
               </h1>
-              <p className="text-lg leading-8 text-gray-600 mb-10">
-                {/* Parágrafo explicativo abaixo do título */}
+              <p className="text-xl leading-relaxed text-gray-600 mb-12">
                 Conectamos estudantes com os melhores explicadores de Portugal. 
                 Aprenda ao seu ritmo, no seu tempo, com quem entende as suas necessidades.
               </p>
@@ -62,36 +84,28 @@ export const HomePage = () => {  // Declara um componente funcional chamado 'Hom
               initial={{ y: 30, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="flex flex-col sm:flex-row gap-4 justify-center max-w-lg mx-auto"
+              className="flex flex-col sm:flex-row gap-6 justify-center max-w-lg mx-auto"
             >
-              {/* Layout responsivo: empilha em telemóveis, alinha em linha em ecrãs maiores */}
-
               <Link to="/student-questionnaire" className="flex-1">
-                {/* Link que leva ao questionário para estudantes */}
                 <Button 
                   size="lg" 
-                  className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 group"
+                  className="w-full text-lg py-6 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white shadow-lg hover:shadow-xl transition-all duration-200 group"
                 >
-                  <Search className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
-                  {/* Ícone de pesquisa à esquerda do texto do botão */}
+                  <Search className="mr-2 h-6 w-6 group-hover:scale-110 transition-transform" />
                   Encontrar explicador ideal
-                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                  {/* Ícone de seta à direita que se move ao passar o rato */}
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
               
               <Link to="/tutor-questionnaire" className="flex-1">
-                {/* Link que leva ao formulário para quem quer ser explicador */}
                 <Button 
                   size="lg" 
                   variant="outline"
-                  className="w-full border-2 border-green-500 text-green-600 hover:bg-green-500 hover:text-white shadow-lg hover:shadow-xl transition-all duration-200 group"
+                  className="w-full text-lg py-6 border-2 border-green-500 text-green-600 hover:bg-green-500 hover:text-white shadow-lg hover:shadow-xl transition-all duration-200 group"
                 >
-                  <GraduationCap className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
-                  {/* Ícone de chapéu de formatura */}
+                  <GraduationCap className="mr-2 h-6 w-6 group-hover:scale-110 transition-transform" />
                   Quero ser explicador
-                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                  {/* Ícone de seta com pequeno movimento ao passar o rato */}
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
             </motion.div>
@@ -104,8 +118,7 @@ export const HomePage = () => {  // Declara um componente funcional chamado 'Hom
           transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
           className="absolute top-20 left-10 opacity-20"
         >
-          {/* Ícone de livro decorativo */}
-          <BookOpen className="h-12 w-12 text-yellow-500" />
+          <BookOpen className="h-16 w-16 text-yellow-500" />
         </motion.div>
         
         <motion.div
@@ -113,36 +126,29 @@ export const HomePage = () => {  // Declara um componente funcional chamado 'Hom
           transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 2 }}
           className="absolute top-32 right-16 opacity-20"
         >
-          {/* Ícone de utilizadores (pessoas) */}
-          <Users className="h-16 w-16 text-green-500" />
+          <Users className="h-20 w-20 text-green-500" />
         </motion.div>
       </section>
 
       {/* Features Section */}
-      <section className="py-16 bg-white/60 backdrop-blur-sm h-screen snap-start flex items-center">
-        {/* 👇 ADDED: h-screen + snap-start → esta secção também faz parte do scroll "encaixado" */}
-        {/* Fundo semi-transparente com ligeiro desfoque */}
-
+      <section className="py-24 bg-white/60 backdrop-blur-sm h-screen snap-start flex items-center">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             whileInView={{ y: 0, opacity: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="mx-auto max-w-2xl text-center mb-16"
+            className="mx-auto max-w-2xl text-center mb-20"
           >
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl mb-4">
-              {/* Subtítulo grande */}
+            <h2 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl mb-6">
               Como funciona?
             </h2>
-            <p className="text-lg text-gray-600">
-              {/* Texto explicativo curto */}
+            <p className="text-xl text-gray-600">
               Um processo simples e eficaz para encontrar o explicador ideal
             </p>
           </motion.div>
 
-          <div className="mx-auto grid max-w-5xl grid-cols-1 gap-8 lg:grid-cols-3">
-            {/* Grelha responsiva: 1 coluna em telemóvel, 3 em ecrãs grandes */}
+          <div className="mx-auto grid max-w-5xl grid-cols-1 gap-12 lg:grid-cols-3">
             {[
               {
                 icon: Search,
@@ -152,7 +158,7 @@ export const HomePage = () => {  // Declara um componente funcional chamado 'Hom
               {
                 icon: Users,
                 title: "2. Encontre matches perfeitos",
-                description: "Ajudamos-te a encontrar o explicador ideal para ti"
+                description: "Ajudamos-te a encontrar o explicador ideal para ti."
               },
               {
                 icon: Star,
@@ -168,16 +174,13 @@ export const HomePage = () => {  // Declara um componente funcional chamado 'Hom
                 transition={{ duration: 0.6, delay: index * 0.1 }}
                 className="text-center"
               >
-                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-yellow-100 to-green-100">
-                  {/* Caixa circular com gradiente para o ícone */}
-                  <feature.icon className="h-8 w-8 text-green-600" />
+                <div className="mx-auto mb-8 flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-yellow-100 to-green-100">
+                  <feature.icon className="h-10 w-10 text-green-600" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">
-                  {/* Título do passo */}
+                <h3 className="text-2xl font-semibold text-gray-900 mb-4">
                   {feature.title}
                 </h3>
-                <p className="text-gray-600">
-                  {/* Descrição do passo */}
+                <p className="text-lg text-gray-600">
                   {feature.description}
                 </p>
               </motion.div>
@@ -187,10 +190,7 @@ export const HomePage = () => {  // Declara um componente funcional chamado 'Hom
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 h-screen snap-start flex items-center">
-        {/* 👇 ADDED: h-screen + snap-start para que esta também encaixe no scroll */}
-        {/* Seção final com chamada para ação (CTA) */}
-
+      <section className="py-24 h-screen snap-start flex items-center">
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           whileInView={{ y: 0, opacity: 1 }}
@@ -198,25 +198,20 @@ export const HomePage = () => {  // Declara um componente funcional chamado 'Hom
           transition={{ duration: 0.6 }}
           className="mx-auto max-w-4xl px-6 text-center"
         >
-          <div className="rounded-3xl bg-gradient-to-r from-yellow-100 via-green-100 to-blue-100 p-8 sm:p-12 shadow-xl">
-            {/* Caixa com cantos arredondados, gradiente e sombra */}
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              {/* Pergunta incentivadora */}
+          <div className="rounded-3xl bg-gradient-to-r from-yellow-100 via-green-100 to-blue-100 p-12 sm:p-16 shadow-xl">
+            <h2 className="text-4xl font-bold text-gray-900 mb-6">
               Pronto para começar?
             </h2>
-            <p className="text-lg text-gray-600 mb-8">
-              {/* Mensagem que reforça a confiança */}
+            <p className="text-xl text-gray-600 mb-10">
               Junte-se a milhares de estudantes que já encontraram o seu explicador ideal
             </p>
             <Link to="/marketplace">
-              {/* Link para explorar os explicadores disponíveis */}
               <Button 
                 size="lg" 
-                className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+                className="text-lg py-6 bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white shadow-lg hover:shadow-xl transition-all duration-200"
               >
                 Explorar explicadores
-                <ArrowRight className="ml-2 h-4 w-4" />
-                {/* Pequeno ícone de seta à direita do texto */}
+                <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
           </div>
