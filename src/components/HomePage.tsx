@@ -20,11 +20,15 @@ import { GraduationCap, Search, BookOpen, Users, Star, ArrowRight } from 'lucide
 
 export const HomePage = () => {  // Declara um componente funcional chamado 'HomePage'
   return (  // Começa a descrição do que será mostrado no ecrã
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50">
+    <div 
+      className="h-screen overflow-y-scroll snap-y snap-mandatory scroll-smooth bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50"
+      // 👇 ADDED: ativa o comportamento "scroll snap" vertical com rolagem suave
+    >
       {/* Contém toda a página; define altura mínima e fundo com gradiente */}
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden py-20 sm:py-32">
+      <section className="relative overflow-hidden py-20 sm:py-32 h-screen snap-start">
+        {/* 👇 ADDED: h-screen + snap-start → esta secção ocupa o ecrã inteiro e “encaixa” ao fazer scroll */}
         {/* Secção com espaçamento grande; 'relative' permite posicionar elementos dentro dela */}
 
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
@@ -115,7 +119,8 @@ export const HomePage = () => {  // Declara um componente funcional chamado 'Hom
       </section>
 
       {/* Features Section */}
-      <section className="py-16 bg-white/60 backdrop-blur-sm">
+      <section className="py-16 bg-white/60 backdrop-blur-sm h-screen snap-start flex items-center">
+        {/* 👇 ADDED: h-screen + snap-start → esta secção também faz parte do scroll "encaixado" */}
         {/* Fundo semi-transparente com ligeiro desfoque */}
 
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
@@ -182,7 +187,8 @@ export const HomePage = () => {  // Declara um componente funcional chamado 'Hom
       </section>
 
       {/* CTA Section */}
-      <section className="py-16">
+      <section className="py-16 h-screen snap-start flex items-center">
+        {/* 👇 ADDED: h-screen + snap-start para que esta também encaixe no scroll */}
         {/* Seção final com chamada para ação (CTA) */}
 
         <motion.div
