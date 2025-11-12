@@ -168,7 +168,7 @@ export const Marketplace = () => {
               <Card className="p-6 h-full hover:shadow-xl transition-all duration-200 border-0 bg-white/80 backdrop-blur-sm group">
                 <div className="text-center mb-4">
                   <img
-                    src={tutor.profilePicture}
+                    src={tutor.profile_picture}
                     alt={tutor.name}
                     className="w-20 h-20 rounded-full mx-auto mb-3 object-cover ring-4 ring-yellow-100 group-hover:ring-green-200 transition-all"
                   />
