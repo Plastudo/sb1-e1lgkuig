@@ -20,6 +20,9 @@ export type TutorData = {
   question_1_answer: string
   bio?: string
   subjects?: string[]
+  availability?: string[]
+  rating?: number
+  location?: string
   profile_picture?: string
   created_at?: string
   updated_at?: string
