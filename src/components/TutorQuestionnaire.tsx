@@ -6,7 +6,7 @@
 // Inclui barra de progresso, navegação entre perguntas, feedback visual e animações com Framer Motion.
 
 //-----------------IMPORTAÇÕES-----------------
-import React, { useState, useEffect } from 'react' // React e hooks para estado e efeitos
+import React, { useState } from 'react' // React e hooks para estado
 import { useNavigate } from 'react-router-dom' // Para navegação entre páginas
 import { motion, AnimatePresence } from 'framer-motion' // Biblioteca para animações suaves
 import { Button } from './ui/button' // Componente de botão estilizado
