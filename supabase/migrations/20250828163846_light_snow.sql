@@ -2,28 +2,28 @@
   # Create tutores and temp_tutores tables
 
   1. New Tables
-    - temp_tutores
-      - id (uuid, primary key)
-      - session_id (text, unique) - for tracking questionnaire sessions
-      - question_1_answer (text) - stores answer to first question
-      - created_at (timestamp)
+    - `temp_tutores`
+      - `id` (uuid, primary key) 
+      - `session_id` (text, unique) - for tracking questionnaire sessions
+      - `question_1_answer` (text) - stores answer to first question
+      - `created_at` (timestamp)
       
-    - tutores
-      - id (uuid, primary key)
-      - user_id (uuid, references auth.users) - links to authenticated user
-      - name (text) - tutor's display name
-      - email (text) - tutor's contact email
-      - question_1_answer (text) - stores answer from questionnaire
-      - bio (text) - tutor's biography/description
-      - subjects (text array) - list of subjects they teach
-      - profile_picture (text) - URL to profile image
-      - created_at (timestamp)
-      - updated_at (timestamp)
+    - `tutores` 
+      - `id` (uuid, primary key)
+      - `user_id` (uuid, references auth.users) - links to authenticated user
+      - `name` (text) - tutor's display name
+      - `email` (text) - tutor's contact email
+      - `question_1_answer` (text) - stores answer from questionnaire
+      - `bio` (text) - tutor's biography/description
+      - `subjects` (text array) - list of subjects they teach
+      - `profile_picture` (text) - URL to profile image
+      - `created_at` (timestamp)
+      - `updated_at` (timestamp)
 
   2. Security
     - Enable RLS on both tables
-    - temp_tutores: Public read/write (temporary data, no auth required)
-    - tutores: Authenticated users can read all, but only update their own records
+    - `temp_tutores`: Public read/write (temporary data, no auth required)
+    - `tutores`: Authenticated users can read all, but only update their own records
 */
 
 -- Create temp_tutores table for questionnaire data
