@@ -20,6 +20,7 @@ import { Input } from './ui/input'  // Campo de texto
 import { Label } from './ui/label'  // Texto descritivo para inputs
 import { useAuth } from '../contexts/AuthContext'  // Contexto de autenticação
 import { Mail, Lock, User, Eye, EyeOff, Loader2 } from 'lucide-react'  // Ícones visuais
+import { supabase } from '../lib/supabase'
 
 interface AuthModalProps {
   onComplete: (userId: string) => void
@@ -45,8 +46,6 @@ export const AuthModal = ({ onComplete, title, subtitle }: AuthModalProps) => {
 
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-      if (!supabaseUrl || supabaseUrl.includes('placeholder') || supabaseUrl.includes('xyzcompany')) {
-        throw new Error('Supabase não está configurado. Por favor, configure as suas credenciais Supabase.')
       }
 
       let result
