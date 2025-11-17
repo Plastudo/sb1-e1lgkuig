@@ -20,6 +20,7 @@ import { Input } from './ui/input'  // Campo de texto
 import { Label } from './ui/label'  // Texto descritivo para inputs
 import { useAuth } from '../contexts/AuthContext'  // Contexto de autenticação
 import { Mail, Lock, User, Eye, EyeOff, Loader2 } from 'lucide-react'  // Ícones visuais
+import { supabase } from '../lib/supabase'
 
 interface AuthModalProps {
   onComplete: (userId: string) => void
@@ -38,39 +39,44 @@ export const AuthModal = ({ onComplete, title, subtitle }: AuthModalProps) => {
 
   const { signUp, signIn } = useAuth()
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
+ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 
-    try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-      if (!supabaseUrl || supabaseUrl.includes('placeholder') || supabaseUrl.includes('xyzcompany')) {
-        throw new Error('Supabase não está configurado. Por favor, configure as suas credenciais Supabase.')
-      }
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault()
+  setLoading(true)
+  setError('')
 
-      let result
-      if (isSignUp) {
-        result = await signUp(email, password)
-        if (result.data?.user) {
-          onComplete(result.data.user.id)
-        }
-      } else {
-        result = await signIn(email, password)
-        if (result.data?.user) {
-          onComplete(result.data.user.id)
-        }
-      }
+  let result: any // declarar fora do try
 
-      if (result.error) {
-        throw result.error
+  try {
+    if (isSignUp) {
+      result = await signUp(email, password)
+      const user = result.data?.user
+
+      if (user) {
+        const { error: insertError } = await supabase.from('TutorData').insert({
+          user_id: user.id,
+          name,
+          email,
+          question_1_answer: ''
+        })
+        if (insertError) throw insertError
+        onComplete(user.id)
       }
-    } catch (error: any) {
-      setError(error.message || 'Ocorreu um erro. Tente novamente.')
-    } finally {
-      setLoading(false)
+    } else {
+      result = await signIn(email, password)
+      if (result.data?.user) {
+        onComplete(result.data.user.id)
+      }
     }
+
+    if (result?.error) throw result.error
+  } catch (error: any) {
+    setError(error.message || 'Ocorreu um erro. Tente novamente.')
+  } finally {
+    setLoading(false)
   }
+}
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8 flex items-center justify-center">
