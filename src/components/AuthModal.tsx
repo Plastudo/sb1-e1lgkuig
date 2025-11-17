@@ -39,35 +39,44 @@ export const AuthModal = ({ onComplete, title, subtitle }: AuthModalProps) => {
 
   const { signUp, signIn } = useAuth()
 
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault()
+  setLoading(true)
+  setError('')
 
-      let result
-      if (isSignUp) {
-        result = await signUp(email, password)
-        if (result.data?.user) {
-          onComplete(result.data.user.id)
-        }
-      } else {
-        result = await signIn(email, password)
-        if (result.data?.user) {
-          onComplete(result.data.user.id)
-        }
+  let result: any // declarar fora do try
+
+  try {
+    if (isSignUp) {
+      result = await signUp(email, password)
+      const user = result.data?.user
+
+      if (user) {
+        const { error: insertError } = await supabase.from('TutorData').insert({
+          user_id: user.id,
+          name,
+          email,
+          question_1_answer: ''
+        })
+        if (insertError) throw insertError
+        onComplete(user.id)
       }
-
-      if (result.error) {
-        throw result.error
+    } else {
+      result = await signIn(email, password)
+      if (result.data?.user) {
+        onComplete(result.data.user.id)
       }
-    } catch (error: any) {
-      setError(error.message || 'Ocorreu um erro. Tente novamente.')
-    } finally {
-      setLoading(false)
     }
+
+    if (result?.error) throw result.error
+  } catch (error: any) {
+    setError(error.message || 'Ocorreu um erro. Tente novamente.')
+  } finally {
+    setLoading(false)
   }
+}
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8 flex items-center justify-center">
