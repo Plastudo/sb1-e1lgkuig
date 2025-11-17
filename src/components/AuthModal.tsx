@@ -39,12 +39,12 @@ export const AuthModal = ({ onComplete, title, subtitle }: AuthModalProps) => {
 
   const { signUp, signIn } = useAuth()
 
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
-
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 
       let result
       if (isSignUp) {
