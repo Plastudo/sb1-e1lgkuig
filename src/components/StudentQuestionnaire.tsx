@@ -49,7 +49,16 @@ const questions = [
       { value: "ciencias", label: "C) Ciências Naturais e Biologia" },
       { value: "humanas", label: "D) Ciências Humanas e Sociais" }
     ]
-  }
+  },
+   {
+    id: 2,  // ID único para identificar a pergunta.
+    title: "Qual a fase escolar?",  // Texto principal da pergunta.
+    options: [  // Lista de respostas disponíveis.
+      { value: "Básico", label: "A) Ensino Básico" },
+      { value: "Secundário", label: "B) Ensino Secundário" },
+      { value: "Superior", label: "C) Ensino Superior" }
+    ]
+  },
 ]
 
 //---------DADOS FICTÍCIOS (EXPLICADORES)-------
