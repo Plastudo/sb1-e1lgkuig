@@ -43,12 +43,6 @@ export const AuthModal = ({ onComplete, title, subtitle }: AuthModalProps) => {
     setLoading(true)
     setError('')
 
-    try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-      if (!supabaseUrl || supabaseUrl.includes('placeholder') || supabaseUrl.includes('xyzcompany')) {
-        throw new Error('Supabase não está configurado. Por favor, configure as suas credenciais Supabase.')
-      }
-
       let result
       if (isSignUp) {
         result = await signUp(email, password)
