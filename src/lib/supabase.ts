@@ -28,7 +28,7 @@ export type TutorData = {
   updated_at?: string
 }
 
-export type TempTutorData = {
+export type TempStudentData = {
   id?: string
   session_id: string
   question_1: string
