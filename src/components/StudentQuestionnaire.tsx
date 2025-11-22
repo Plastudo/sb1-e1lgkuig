@@ -19,7 +19,7 @@
 //---------CODE----------------
 
 //---------IMPORTAÇÕES--------------------------
-import React, { useState } from 'react'  
+import React, { useState, useRef } from 'react' 
 // React: biblioteca principal para criar interfaces.
 // useState: hook que permite guardar e atualizar valores (estado) dentro de um componente.
 
@@ -39,7 +39,7 @@ import { ChevronRight, ChevronLeft, Check, Star, Mail } from 'lucide-react'
 // Ícones SVG prontos a usar, importados da biblioteca Lucide (muito leve e personalizável).
 
 // === IMPORTAÇÕES SUPABASE + UUID ===
-import { supabase, TempTutorData } from '../lib/supabase'
+import { supabase, TempStudentData } from '../lib/supabase'
 import { v4 as uuidv4 } from 'uuid'
 
 //---------PERGUNTAS DO QUESTIONÁRIO------------
@@ -120,8 +120,8 @@ export const StudentQuestionnaire = () => {
   const saveAnswersToSupabase = async () => {
     const payload = {
       session_id: sessionIdRef.current,
-      question_1_answer: answers.question_1_answer || null,
-      question_2_answer: answers.question_2_answer || null,
+      question_1: answers.question_1_answer || null,
+      question_2: answers.question_2_answer || null,
       created_at: new Date().toISOString()
     }
 
