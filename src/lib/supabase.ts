@@ -27,3 +27,11 @@ export type TutorData = {
   created_at?: string
   updated_at?: string
 }
+
+export type TempTutorData = {
+  id?: string
+  session_id: string
+  question_1: string
+  question_2: string
+  created_at?: string
+}
