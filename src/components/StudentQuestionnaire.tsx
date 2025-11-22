@@ -38,6 +38,10 @@ import { Card } from './ui/card'
 import { ChevronRight, ChevronLeft, Check, Star, Mail } from 'lucide-react'  
 // Ícones SVG prontos a usar, importados da biblioteca Lucide (muito leve e personalizável).
 
+// === IMPORTAÇÕES SUPABASE + UUID ===
+import { supabase, TempTutorData } from '../lib/supabase'
+import { v4 as uuidv4 } from 'uuid'
+
 //---------PERGUNTAS DO QUESTIONÁRIO------------
 const questions = [
   {
@@ -109,18 +113,40 @@ export const StudentQuestionnaire = () => {
   // Permite redirecionar o utilizador para outras páginas (como /profile ou /marketplace).
 
 
+  // === GERAR SESSION ID ÚNICO POR UTILIZADOR ===
+  const sessionIdRef = useRef(uuidv4())
+
+  // === FUNÇÃO PARA GUARDAR RESPOSTAS NO SUPABASE ===
+  const saveAnswersToSupabase = async () => {
+    const payload = {
+      session_id: sessionIdRef.current,
+      question_1_answer: answers.question_1_answer || null,
+      question_2_answer: answers.question_2_answer || null,
+      created_at: new Date().toISOString()
+    }
+
+    const { data, error } = await supabase
+      .from('temp_students')
+      .insert([payload])
+
+    if (error) {
+      console.error("Erro ao guardar respostas no Supabase:", error)
+    } else {
+      console.log("Respostas guardadas:", data)
+    }
+  }
+
+  
   //-----FUNÇÃO: guardar resposta e avançar-----
   const handleAnswer = (questionId: number, answer: string) => {
-    // Cria um novo objeto de respostas, mantendo as anteriores.
     const newAnswers = { ...answers, [`question_${questionId}_answer`]: answer }
-    setAnswers(newAnswers)  // Atualiza o estado.
+    setAnswers(newAnswers)
 
-    // Se ainda houver perguntas, passa para a próxima.
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1)
     } else {
-      // Caso contrário, mostra os tutores (resultados).
       setShowResults(true)
+      saveAnswersToSupabase()   // ← GUARDA AQUI
     }
   }
 
