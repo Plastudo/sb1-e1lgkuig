@@ -136,7 +136,7 @@ export const StudentQuestionnaire = () => {
     }
   }
 
-  
+
   //-----FUNÇÃO: guardar resposta e avançar-----
   const handleAnswer = (questionId: number, answer: string) => {
     const newAnswers = { ...answers, [`question_${questionId}_answer`]: answer }
