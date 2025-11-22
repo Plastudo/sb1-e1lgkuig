@@ -96,37 +96,42 @@ export const StudentQuestionnaire = () => {
   const sessionIdRef = useRef(uuidv4())
 
   //---------------- FUNÇÃO PARA GUARDAR RESPOSTAS -----------------
-  const saveAnswersToSupabase = async () => {
-    const payload = {
-      session_id: sessionIdRef.current,
-      question_1: answers.question_1_answer || null,
-      question_2: answers.question_2_answer || null,
-      created_at: new Date().toISOString()
-    }
-
-    const { data, error } = await supabase
-      .from('temp_students')
-      .insert([payload])
-
-    if (error) {
-      console.error("Erro ao guardar respostas no Supabase:", error)
-    } else {
-      console.log("Respostas guardadas:", data)
-    }
+const saveAnswersToSupabase = async (answers) => {
+  const payload = {
+    session_id: sessionIdRef.current,
+    question_1: answers.question_1_answer || null,
+    question_2: answers.question_2_answer || null,
   }
+
+  console.log("Payload enviado:", payload)
+
+  const { data, error } = await supabase
+    .from('temp_students')
+    .insert([payload])
+
+  if (error) console.error("Erro supabase:", error)
+  else console.log("Guardado:", data)
+}
 
   //---------------- FUNÇÃO PARA GUARDAR RESPOSTA E AVANÇAR -----------------
-  const handleAnswer = (questionId: number, answer: string) => {
-    const newAnswers = { ...answers, [`question_${questionId}_answer`]: answer }
-    setAnswers(newAnswers)
-
-    if (currentQuestion < questions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1)
-    } else {
-      setShowResults(true)
-      saveAnswersToSupabase()
-    }
+const handleAnswer = async (questionId: number, answer: string) => {
+  const updatedAnswers = {
+    ...answers,
+    [`question_${questionId}_answer`]: answer
   }
+
+  setAnswers(updatedAnswers)
+
+  const isLastQuestion = currentQuestion === questions.length - 1
+
+  if (isLastQuestion) {
+    await saveAnswersToSupabase(updatedAnswers)
+    setShowResults(true)
+  } else {
+    setCurrentQuestion(currentQuestion + 1)
+  }
+}
+
 
   //---------------- FUNÇÃO PARA CONTACTAR TUTOR -----------------
   const handleContactTutor = (email: string, tutorName: string) => {
