@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from './ui/button'
 import { Card } from './ui/card'
-import { ChevronRight, ChevronLeft, Check, Star, Mail } from 'lucide-react'
+import { ChevronRight, ChevronLeft, Check, Star, Mail } from 'lucide-react' 
 
 // Supabase + UUID
 import { supabase } from '../lib/supabase'
