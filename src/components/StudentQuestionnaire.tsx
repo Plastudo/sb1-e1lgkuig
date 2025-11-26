@@ -11,7 +11,7 @@ import { supabase } from '../lib/supabase'
 import { v4 as uuidv4 } from 'uuid'
 
 // Serviço de matching (dinâmico)
-import { getBestTutorMatches } from '../functions/BestFitTutors'
+import { getBestTutorMatches } from '../../src/Functions/BestFitTutors'
 
 //---------------- PERGUNTAS ---------------------
 const questions = [
