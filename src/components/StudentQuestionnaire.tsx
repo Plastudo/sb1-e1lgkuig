@@ -52,8 +52,8 @@ export const StudentQuestionnaire = () => {
   const saveAnswersToSupabase = async (answers) => {
     const payload = {
       session_id: sessionIdRef.current,
-      question_1: answers.question_1_answer || null,
-      question_2: answers.question_2_answer || null,
+      question_1_answer: answers.question_1_answer || null,
+      question_2_answer: answers.question_2_answer || null,
     }
 
     const { error } = await supabase
