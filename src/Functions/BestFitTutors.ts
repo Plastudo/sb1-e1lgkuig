@@ -7,12 +7,11 @@ import { v4 as uuidv4 } from 'uuid'
 /**
  * Serviço Dinâmico de Matching
  */
-export async function getBestTutorMatches(studentId: number) {
-  // 1. Buscar estudante
+export async function getBestTutorMatches(sessionId: string) {
   const { data: student, error: studentError } = await supabase
     .from("temp_students")
     .select("*")
-    .eq("id", studentId)
+    .eq("session_id", sessionId) // <--- aqui
     .single();
 
   if (studentError || !student) {
