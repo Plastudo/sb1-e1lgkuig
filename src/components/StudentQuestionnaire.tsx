@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from './ui/button'
 import { Card } from './ui/card'
-import { ChevronRight, ChevronLeft, Check, Star, Mail } from 'lucide-react' 
+import { ChevronRight, ChevronLeft, Check, Star, Mail } from 'lucide-react'
 
 // Supabase + UUID
 import { supabase } from '../lib/supabase'
@@ -38,7 +38,6 @@ const questions = [
 
 //---------------- COMPONENTE PRINCIPAL -----------------
 export const StudentQuestionnaire = () => {
-
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [showResults, setShowResults] = useState(false)
@@ -69,38 +68,74 @@ export const StudentQuestionnaire = () => {
       ...answers,
       [`question_${questionId}_answer`]: answer
     }
-
     setAnswers(updatedAnswers)
 
     const isLastQuestion = currentQuestion === questions.length - 1
 
     if (isLastQuestion) {
-      // 1. Guardar respostas no supabase
-      await saveAnswersToSupabase(updatedAnswers)
+      try {
+        // 1️⃣ Salva respostas no Supabase
+        const payload = {
+          session_id: sessionIdRef.current,
+          question_1_answer: updatedAnswers.question_1_answer || null,
+          question_2_answer: updatedAnswers.question_2_answer || null,
+        }
 
-      // 2. Obter os tutores com maior compatibilidade
-      const topMatches = await getBestTutorMatches(sessionIdRef.current)
+        const { error: saveError } = await supabase
+          .from('temp_students')
+          .insert([payload])
 
-      // 3. Buscar dados completos dos tutores
-      const tutorIds = topMatches.map(t => t.tutorId)
+        if (saveError) {
+          console.error("Erro ao salvar respostas:", saveError)
+          return
+        }
 
-      const { data: tutorsData, error } = await supabase
-        .from("tutors")
-        .select("*")
-        .in("id", tutorIds)
+        // 2️⃣ Busca os top 3 matches
+        const topMatches = await getBestTutorMatches(sessionIdRef.current)
 
-      if (error) console.error(error)
+        if (!topMatches || topMatches.length === 0) {
+          console.warn("Nenhum tutor encontrado")
+          setMatchedTutors([])
+          setShowResults(true)
+          return
+        }
 
-      // 4. Criar estrutura final ordenada pela compatibilidade
-      const finalTutors = topMatches.map(match => ({
-        ...match,
-        ...tutorsData.find(t => t.id === match.tutorId)
-      }))
+        // 3️⃣ Busca dados completos dos tutors
+        const tutorIds = topMatches.map(t => t.tutorId)
+        const { data: tutorsData, error: tutorsError } = await supabase
+          .from("tutors")
+          .select("*")
+          .in("id", tutorIds)
 
-      setMatchedTutors(finalTutors)
+        if (tutorsError || !tutorsData) {
+          console.error("Erro ao buscar dados dos tutors:", tutorsError)
+          setMatchedTutors([])
+          setShowResults(true)
+          return
+        }
 
-      // 5. Mostrar resultados
-      setShowResults(true)
+        // 4️⃣ Combina compatibilidade com dados completos dos tutors
+        const finalTutors = topMatches.map(match => {
+          const tutorData = tutorsData.find(t => t.id.toString() === match.tutorId.toString())
+          return {
+            tutorId: match.tutorId,
+            compatibility: match.compatibility,
+            name: tutorData?.name || "—",
+            email: tutorData?.email || "—",
+            subject: tutorData?.subject || "—",
+            bio: tutorData?.bio || "—",
+            profile_picture: tutorData?.profile_picture || "",
+            rating: tutorData?.rating || 0,
+          }
+        })
+
+        // 5️⃣ Atualiza estado e mostra resultados
+        setMatchedTutors(finalTutors)
+        setShowResults(true)
+
+      } catch (err) {
+        console.error("Erro ao processar respostas e buscar tutors:", err)
+      }
     } else {
       setCurrentQuestion(currentQuestion + 1)
     }
@@ -142,7 +177,6 @@ export const StudentQuestionnaire = () => {
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-
             {matchedTutors.map((tutor, index) => (
               <motion.div
                 key={tutor.tutorId}
@@ -162,8 +196,6 @@ export const StudentQuestionnaire = () => {
                         {tutor.rating || "—"}
                       </span>
                     </div>
-
-                    {/* Compatibilidade */}
                     <p className="text-blue-600 font-semibold text-sm">
                       Compatibilidade: {tutor.compatibility}%
                     </p>
@@ -181,7 +213,6 @@ export const StudentQuestionnaire = () => {
                 </Card>
               </motion.div>
             ))}
-
           </div>
 
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="text-center">
