@@ -1,4 +1,3 @@
-//---------------- IMPORTAÇÕES -------------------
 import React, { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -10,11 +9,22 @@ import { ChevronRight, ChevronLeft, Check, Star, Mail } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { v4 as uuidv4 } from 'uuid'
 
-// Serviço de matching (dinâmico)
+// Serviço de matching
 import { getBestTutorMatches } from '../Functions/BestFitTutors'
 
 //---------------- PERGUNTAS ---------------------
-const questions = [
+interface QuestionOption {
+  value: string
+  label: string
+}
+
+interface Question {
+  id: number
+  title: string
+  options: QuestionOption[]
+}
+
+const questions: Question[] = [
   {
     id: 1,
     title: "Em que área precisa de ajuda?",
@@ -37,104 +47,86 @@ const questions = [
 ]
 
 //---------------- COMPONENTE PRINCIPAL -----------------
-export const StudentQuestionnaire = () => {
-  const [currentQuestion, setCurrentQuestion] = useState(0)
+interface TutorMatch {
+  tutorId: number
+  compatibility: number
+  name?: string
+  profile_picture?: string
+  subject?: string
+  rating?: string
+  bio?: string
+  email?: string
+}
+
+export const StudentQuestionnaire: React.FC = () => {
+
+  const [currentQuestion, setCurrentQuestion] = useState<number>(0)
   const [answers, setAnswers] = useState<Record<string, string>>({})
-  const [showResults, setShowResults] = useState(false)
-  const [matchedTutors, setMatchedTutors] = useState<any[]>([])
+  const [showResults, setShowResults] = useState<boolean>(false)
+  const [matchedTutors, setMatchedTutors] = useState<TutorMatch[]>([])
   const navigate = useNavigate()
 
-  // ID único para esta sessão
-  const sessionIdRef = useRef(uuidv4())
+  const sessionIdRef = useRef<string>(uuidv4())
 
   //---------------- FUNÇÃO PARA GUARDAR RESPOSTAS -----------------
-  const saveAnswersToSupabase = async (answers) => {
+  const saveAnswersToSupabase = async (answers: Record<string, string>) => {
     const payload = {
       session_id: sessionIdRef.current,
       question_1_answer: answers.question_1_answer || null,
       question_2_answer: answers.question_2_answer || null,
     }
 
-    const { error } = await supabase
+    const { data: insertedData, error: insertError } = await supabase
       .from('temp_students')
       .insert([payload])
+      .select()
 
-    if (error) console.error("Erro supabase:", error)
+    if (insertError) {
+      console.error("Erro ao salvar respostas:", insertError)
+      return null
+    }
+
+    return insertedData[0]
   }
 
   //---------------- FUNÇÃO PARA GUARDAR RESPOSTA E AVANÇAR -----------------
   const handleAnswer = async (questionId: number, answer: string) => {
-    const updatedAnswers = {
+    const updatedAnswers: Record<string, string> = {
       ...answers,
       [`question_${questionId}_answer`]: answer
     }
+
     setAnswers(updatedAnswers)
 
     const isLastQuestion = currentQuestion === questions.length - 1
 
     if (isLastQuestion) {
+      const studentRecord = await saveAnswersToSupabase(updatedAnswers)
+      if (!studentRecord) return
+
       try {
-        // 1️⃣ Salva respostas no Supabase
-        const payload = {
-          session_id: sessionIdRef.current,
-          question_1_answer: updatedAnswers.question_1_answer || null,
-          question_2_answer: updatedAnswers.question_2_answer || null,
-        }
-
-        const { error: saveError } = await supabase
-          .from('temp_students')
-          .insert([payload])
-
-        if (saveError) {
-          console.error("Erro ao salvar respostas:", saveError)
-          return
-        }
-
-        // 2️⃣ Busca os top 3 matches
         const topMatches = await getBestTutorMatches(sessionIdRef.current)
-
-        if (!topMatches || topMatches.length === 0) {
-          console.warn("Nenhum tutor encontrado")
-          setMatchedTutors([])
-          setShowResults(true)
-          return
-        }
-
-        // 3️⃣ Busca dados completos dos tutors
         const tutorIds = topMatches.map(t => t.tutorId)
-        const { data: tutorsData, error: tutorsError } = await supabase
+
+        const { data: tutorsData, error } = await supabase
           .from("tutors")
           .select("*")
           .in("id", tutorIds)
 
-        if (tutorsError || !tutorsData) {
-          console.error("Erro ao buscar dados dos tutors:", tutorsError)
-          setMatchedTutors([])
-          setShowResults(true)
+        if (error) {
+          console.error("Erro ao buscar dados dos tutors:", error)
           return
         }
 
-        // 4️⃣ Combina compatibilidade com dados completos dos tutors
-        const finalTutors = topMatches.map(match => {
-          const tutorData = tutorsData.find(t => t.id.toString() === match.tutorId.toString())
-          return {
-            tutorId: match.tutorId,
-            compatibility: match.compatibility,
-            name: tutorData?.name || "—",
-            email: tutorData?.email || "—",
-            subject: tutorData?.subject || "—",
-            bio: tutorData?.bio || "—",
-            profile_picture: tutorData?.profile_picture || "",
-            rating: tutorData?.rating || 0,
-          }
-        })
+        const finalTutors: TutorMatch[] = topMatches.map(match => ({
+          ...match,
+          ...tutorsData?.find(t => t.id === match.tutorId)
+        }))
 
-        // 5️⃣ Atualiza estado e mostra resultados
         setMatchedTutors(finalTutors)
         setShowResults(true)
-
       } catch (err) {
-        console.error("Erro ao processar respostas e buscar tutors:", err)
+        console.error("Erro ao calcular matches:", err)
       }
     } else {
       setCurrentQuestion(currentQuestion + 1)
@@ -171,7 +163,7 @@ export const StudentQuestionnaire = () => {
               Baseado nas suas respostas, encontrámos estes explicadores ideais para si.
             </p>
             <Button variant="outline" onClick={goBack} className="mb-4">
-              <ChevronLeft className="h-4 w-4 mr-2" />
+              <ChevronLeft className="h-4 w-4 mr-2"/>
               Voltar ao questionário
             </Button>
           </motion.div>
@@ -185,16 +177,13 @@ export const StudentQuestionnaire = () => {
                 transition={{ delay: index * 0.1 }}
               >
                 <Card className="p-6 h-full hover:shadow-lg transition-all duration-200 border-0 bg-white/80 backdrop-blur-sm">
-
                   <div className="text-center mb-4">
-                    <img src={tutor.profile_picture} alt={tutor.name} className="w-20 h-20 rounded-full mx-auto mb-3 object-cover" />
+                    <img src={tutor.profile_picture} alt={tutor.name} className="w-20 h-20 rounded-full mx-auto mb-3 object-cover"/>
                     <h3 className="text-xl font-semibold text-gray-900 mb-1">{tutor.name}</h3>
                     <p className="text-green-600 font-medium mb-2">{tutor.subject}</p>
                     <div className="flex items-center justify-center space-x-1 mb-3">
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <span className="text-sm font-medium text-gray-700">
-                        {tutor.rating || "—"}
-                      </span>
+                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400"/>
+                      <span className="text-sm font-medium text-gray-700">{tutor.rating || "—"}</span>
                     </div>
                     <p className="text-blue-600 font-semibold text-sm">
                       Compatibilidade: {tutor.compatibility}%
@@ -205,22 +194,14 @@ export const StudentQuestionnaire = () => {
 
                   <div className="space-y-2">
                     <Button onClick={() => navigate(`/profile/${tutor.tutorId}`)} variant="outline" className="w-full">Ver perfil completo</Button>
-                    <Button onClick={() => handleContactTutor(tutor.email, tutor.name)} className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600">
-                      <Mail className="h-4 w-4 mr-2" /> Contactar
+                    <Button onClick={() => handleContactTutor(tutor.email!, tutor.name!)} className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600">
+                      <Mail className="h-4 w-4 mr-2"/> Contactar
                     </Button>
                   </div>
-
                 </Card>
               </motion.div>
             ))}
           </div>
-
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="text-center">
-            <p className="text-gray-600 mb-4">Quer ver mais opções?</p>
-            <Button onClick={() => navigate('/marketplace')} size="lg" variant="outline" className="border-yellow-400 text-yellow-600 hover:bg-yellow-50">
-              Explorar todos os explicadores
-            </Button>
-          </motion.div>
         </div>
       </div>
     )
@@ -233,7 +214,6 @@ export const StudentQuestionnaire = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8">
       <div className="max-w-4xl mx-auto px-4">
-
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <div className="bg-white rounded-full h-3 overflow-hidden shadow-sm">
             <motion.div
@@ -262,7 +242,7 @@ export const StudentQuestionnaire = () => {
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-lg text-gray-700 group-hover:text-blue-700">{option.label}</span>
-                      <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-blue-500 transform group-hover:translate-x-1 transition-all" />
+                      <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-blue-500 transform group-hover:translate-x-1 transition-all"/>
                     </div>
                   </motion.button>
                 ))}
@@ -270,14 +250,14 @@ export const StudentQuestionnaire = () => {
 
               <div className="flex justify-between mt-8">
                 <Button variant="outline" onClick={goBack} disabled={currentQuestion === 0} className="flex items-center space-x-2">
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft className="h-4 w-4"/>
                   <span>Anterior</span>
                 </Button>
 
                 <div className="text-sm text-gray-500">
                   {answers[`question_${question.id}_answer`] && (
                     <div className="flex items-center space-x-2 text-blue-600">
-                      <Check className="h-4 w-4" />
+                      <Check className="h-4 w-4"/>
                       <span>Respondido</span>
                     </div>
                   )}
