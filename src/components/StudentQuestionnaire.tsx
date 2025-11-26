@@ -1,23 +1,3 @@
-//-----------RESUMO----------------------------
-//Este código cria um questionário interativo para estudantes numa aplicação feita com React.
-//O questionário recolhe respostas do utilizador (por exemplo, em que área precisa de ajuda) e, no final, mostra uma lista de explicadores (tutores) que correspondem às suas preferências.
-//Cada tutor é apresentado com o seu nome, foto, descrição e avaliação. O utilizador pode depois ver o perfil completo ou entrar em contacto por e-mail diretamente.
-
-//--------- FLUXO DO CÒDIGO --------------------
-//O código começa por importar bibliotecas e componentes necessários, como React, animações (Framer Motion) e ícones (Lucide).
-//Define uma lista chamada questions com perguntas e opções de resposta (neste caso, apenas uma pergunta de exemplo).
-//Define também uma lista chamada mockTutors com dados fictícios de explicadores (nome, disciplina, avaliação, foto, etc.).
-//Cria o componente StudentQuestionnaire, que:
-  //Usa o estado (useState) para guardar qual a pergunta atual, as respostas do utilizador e se os resultados devem ser mostrados.
-  //Usa a função navigate (de React Router) para mudar de página ou perfil.
-  //Define handleAnswer — uma função que guarda a resposta e avança para a próxima pergunta (ou mostra os resultados se for a última).
-  //Define handleContactTutor — que abre um e-mail com uma mensagem pré-escrita para o tutor selecionado.
-  //Define goBack — que permite voltar à pergunta anterior ou sair dos resultados.
-//Se showResults for verdadeiro, o código mostra a lista de explicadores compatíveis, com animações e botões para ver o perfil ou contactar.
-//Caso contrário, mostra o questionário com uma barra de progresso, as opções de resposta e um botão “Anterior”.
-
-//---------CODE----------------
-
 //---------------- IMPORTAÇÕES -------------------
 import React, { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -29,6 +9,9 @@ import { ChevronRight, ChevronLeft, Check, Star, Mail } from 'lucide-react'
 // Supabase + UUID
 import { supabase } from '../lib/supabase'
 import { v4 as uuidv4 } from 'uuid'
+
+// Serviço de matching (dinâmico)
+import { getBestTutorMatches } from '../functions/BestFitTutors'
 
 //---------------- PERGUNTAS ---------------------
 const questions = [
@@ -53,85 +36,75 @@ const questions = [
   }
 ]
 
-//---------------- DADOS FICTÍCIOS (TUTORES) -----------------
-const mockTutors = [
-  {
-    id: 1,
-    name: "Ana Silva",
-    subject: "Matemática",
-    bio: "Professora experiente com 8 anos de ensino. Especializada em álgebra e cálculo.",
-    rating: 4.9,
-    email: "ana.silva@email.com",
-    profilePicture: "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop"
-  },
-  {
-    id: 2,
-    name: "João Santos",
-    subject: "Física e Química",
-    bio: "Engenheiro químico com paixão pelo ensino. Métodos práticos e eficazes.",
-    rating: 4.8,
-    email: "joao.santos@email.com",
-    profilePicture: "https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop"
-  },
-  {
-    id: 3,
-    name: "Maria Costa",
-    subject: "Biologia",
-    bio: "Doutora em biologia molecular. Abordagem científica e didática personalizada.",
-    rating: 4.9,
-    email: "maria.costa@email.com",
-    profilePicture: "https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop"
-  }
-]
-
 //---------------- COMPONENTE PRINCIPAL -----------------
 export const StudentQuestionnaire = () => {
 
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [showResults, setShowResults] = useState(false)
+  const [matchedTutors, setMatchedTutors] = useState<any[]>([])
   const navigate = useNavigate()
 
   // ID único para esta sessão
   const sessionIdRef = useRef(uuidv4())
 
   //---------------- FUNÇÃO PARA GUARDAR RESPOSTAS -----------------
-const saveAnswersToSupabase = async (answers) => {
-  const payload = {
-    session_id: sessionIdRef.current,
-    question_1: answers.question_1_answer || null,
-    question_2: answers.question_2_answer || null,
+  const saveAnswersToSupabase = async (answers) => {
+    const payload = {
+      session_id: sessionIdRef.current,
+      question_1: answers.question_1_answer || null,
+      question_2: answers.question_2_answer || null,
+    }
+
+    const { error } = await supabase
+      .from('temp_students')
+      .insert([payload])
+
+    if (error) console.error("Erro supabase:", error)
   }
-
-  console.log("Payload enviado:", payload)
-
-  const { data, error } = await supabase
-    .from('temp_students')
-    .insert([payload])
-
-  if (error) console.error("Erro supabase:", error)
-  else console.log("Guardado:", data)
-}
 
   //---------------- FUNÇÃO PARA GUARDAR RESPOSTA E AVANÇAR -----------------
-const handleAnswer = async (questionId: number, answer: string) => {
-  const updatedAnswers = {
-    ...answers,
-    [`question_${questionId}_answer`]: answer
+  const handleAnswer = async (questionId: number, answer: string) => {
+    const updatedAnswers = {
+      ...answers,
+      [`question_${questionId}_answer`]: answer
+    }
+
+    setAnswers(updatedAnswers)
+
+    const isLastQuestion = currentQuestion === questions.length - 1
+
+    if (isLastQuestion) {
+      // 1. Guardar respostas no supabase
+      await saveAnswersToSupabase(updatedAnswers)
+
+      // 2. Obter os tutores com maior compatibilidade
+      const topMatches = await getBestTutorMatches(sessionIdRef.current)
+
+      // 3. Buscar dados completos dos tutores
+      const tutorIds = topMatches.map(t => t.tutorId)
+
+      const { data: tutorsData, error } = await supabase
+        .from("tutors")
+        .select("*")
+        .in("id", tutorIds)
+
+      if (error) console.error(error)
+
+      // 4. Criar estrutura final ordenada pela compatibilidade
+      const finalTutors = topMatches.map(match => ({
+        ...match,
+        ...tutorsData.find(t => t.id === match.tutorId)
+      }))
+
+      setMatchedTutors(finalTutors)
+
+      // 5. Mostrar resultados
+      setShowResults(true)
+    } else {
+      setCurrentQuestion(currentQuestion + 1)
+    }
   }
-
-  setAnswers(updatedAnswers)
-
-  const isLastQuestion = currentQuestion === questions.length - 1
-
-  if (isLastQuestion) {
-    await saveAnswersToSupabase(updatedAnswers)
-    setShowResults(true)
-  } else {
-    setCurrentQuestion(currentQuestion + 1)
-  }
-}
-
 
   //---------------- FUNÇÃO PARA CONTACTAR TUTOR -----------------
   const handleContactTutor = (email: string, tutorName: string) => {
@@ -169,35 +142,46 @@ const handleAnswer = async (questionId: number, answer: string) => {
           </motion.div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {mockTutors.map((tutor, index) => (
+
+            {matchedTutors.map((tutor, index) => (
               <motion.div
-                key={tutor.id}
+                key={tutor.tutorId}
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
               >
                 <Card className="p-6 h-full hover:shadow-lg transition-all duration-200 border-0 bg-white/80 backdrop-blur-sm">
+
                   <div className="text-center mb-4">
-                    <img src={tutor.profilePicture} alt={tutor.name} className="w-20 h-20 rounded-full mx-auto mb-3 object-cover" />
+                    <img src={tutor.profile_picture} alt={tutor.name} className="w-20 h-20 rounded-full mx-auto mb-3 object-cover" />
                     <h3 className="text-xl font-semibold text-gray-900 mb-1">{tutor.name}</h3>
                     <p className="text-green-600 font-medium mb-2">{tutor.subject}</p>
                     <div className="flex items-center justify-center space-x-1 mb-3">
                       <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <span className="text-sm font-medium text-gray-700">{tutor.rating}</span>
+                      <span className="text-sm font-medium text-gray-700">
+                        {tutor.rating || "—"}
+                      </span>
                     </div>
+
+                    {/* Compatibilidade */}
+                    <p className="text-blue-600 font-semibold text-sm">
+                      Compatibilidade: {tutor.compatibility}%
+                    </p>
                   </div>
 
                   <p className="text-gray-600 text-sm mb-4 line-clamp-3">{tutor.bio}</p>
 
                   <div className="space-y-2">
-                    <Button onClick={() => navigate(`/profile/${tutor.id}`)} variant="outline" className="w-full">Ver perfil completo</Button>
+                    <Button onClick={() => navigate(`/profile/${tutor.tutorId}`)} variant="outline" className="w-full">Ver perfil completo</Button>
                     <Button onClick={() => handleContactTutor(tutor.email, tutor.name)} className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600">
                       <Mail className="h-4 w-4 mr-2" /> Contactar
                     </Button>
                   </div>
+
                 </Card>
               </motion.div>
             ))}
+
           </div>
 
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }} className="text-center">
