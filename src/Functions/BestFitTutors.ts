@@ -1,6 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(process.env.VITE_SUPABASE_URL!, process.env.VITE_SUPABASE_ANON_KEY!);
+// Supabase + UUID
+import { supabase } from '../lib/supabase'
+import { v4 as uuidv4 } from 'uuid'
 
 /**
  * Serviço Dinâmico de Matching
