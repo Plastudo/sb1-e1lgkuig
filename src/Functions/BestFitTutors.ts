@@ -1,85 +1,66 @@
-import { createClient } from "@supabase/supabase-js";
-
-// Supabase + UUID
 import { supabase } from '../lib/supabase'
-import { v4 as uuidv4 } from 'uuid'
+
+interface Answers {
+  [key: string]: string | string[]
+}
+
+interface TutorMatch {
+  tutorId: number
+  compatibility: number
+}
 
 /**
- * Serviço Dinâmico de Matching
+ * Calcula os melhores tutors com base nas respostas do estudante
+ * @param answers respostas do estudante
+ * @returns top 3 tutors com compatibilidade
  */
-export async function getBestTutorMatches(sessionId: string) {
-  const { data: student, error: studentError } = await supabase
-    .from("temp_students")
-    .select("*")
-    .eq("session_id", sessionId) // <--- aqui
-    .single();
+export async function getBestTutorMatches(answers: Answers): Promise<TutorMatch[]> {
+  // 1️⃣ Buscar todos os tutores
+  const { data: tutors, error } = await supabase
+    .from('tutors')
+    .select('*')
 
-  if (studentError || !student) {
-    throw new Error("Erro ao buscar estudante");
+  if (error || !tutors) {
+    throw new Error('Erro ao buscar tutores')
   }
 
-  // 2. Buscar todos os tutores
-  const { data: tutors, error: tutorsError } = await supabase
-    .from("tutors")
-    .select("*");
+  // 2️⃣ Detetar todas as "perguntas" nas respostas
+  const questionKeys = Object.keys(answers).filter(key => key.startsWith('question_'))
+  const questionWeight = 100 / questionKeys.length
 
-  if (tutorsError || !tutors) {
-    throw new Error("Erro ao buscar tutores");
-  }
-
-  // 3. Detetar todas as colunas dinamicamente
-  const questionKeys = Object.keys(student).filter((key) =>
-    key.startsWith("question_")
-  );
-
-  const questionWeight = 100 / questionKeys.length; // peso por pergunta
-
-  // Função de compatibilidade dinâmica
-  function calculateCompatibility(tutor: any) {
-    let total = 0;
+  // 3️⃣ Função de compatibilidade
+  function calculateCompatibility(tutor: any): number {
+    let total = 0
 
     for (const key of questionKeys) {
-      const studentValue = student[key];
-      const tutorValue = tutor[key];
+      const studentValue = answers[key]
+      const tutorValue = tutor[key]
 
-      if (studentValue == null) continue;
+      if (studentValue == null) continue
 
-      // ---- Pergunta tipo STRING ----
-      if (typeof studentValue === "string") {
-        if (tutorValue === studentValue) {
-          total += questionWeight;
-        }
+      // STRING
+      if (typeof studentValue === 'string') {
+        if (tutorValue === studentValue) total += questionWeight
       }
-
-      // ---- Pergunta tipo ARRAY ----
+      // ARRAY
       else if (Array.isArray(studentValue)) {
-        const studentArray = studentValue;
-        const tutorArray = Array.isArray(tutorValue) ? tutorValue : [];
-
-        if (studentArray.length > 0) {
-          const perItem = questionWeight / studentArray.length;
-
-          studentArray.forEach((item) => {
-            if (tutorArray.includes(item)) {
-              total += perItem;
-            }
-          });
-        }
+        const tutorArray = Array.isArray(tutorValue) ? tutorValue : []
+        const perItem = questionWeight / studentValue.length
+        studentValue.forEach(item => {
+          if (tutorArray.includes(item)) total += perItem
+        })
       }
     }
 
-    return Math.round(total);
+    return Math.round(total)
   }
 
-  // 4. Avaliar todos os tutores
-  const results = tutors.map((tutor) => ({
+  // 4️⃣ Avaliar todos os tutores
+  const results = tutors.map(tutor => ({
     tutorId: tutor.id,
-    compatibility: calculateCompatibility(tutor),
-  }));
+    compatibility: calculateCompatibility(tutor)
+  }))
 
-  // 5. Ordenar e pegar top 3
-  return results
-    .sort((a, b) => b.compatibility - a.compatibility)
-    .slice(0, 3);
+  // 5️⃣ Ordenar e pegar top 3
+  return results.sort((a, b) => b.compatibility - a.compatibility).slice(0, 3)
 }
-
