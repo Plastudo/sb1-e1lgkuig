@@ -105,7 +105,7 @@ export const StudentQuestionnaire: React.FC = () => {
       if (!studentRecord) return
 
       try {
-        const topMatches = await getBestTutorMatches(sessionIdRef.current)
+        const topMatches = await getBestTutorMatches(updatedAnswers)
         const tutorIds = topMatches.map(t => t.tutorId)
 
         const { data: tutorsData, error } = await supabase
