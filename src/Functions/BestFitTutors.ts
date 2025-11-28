@@ -1,11 +1,11 @@
 import { supabase } from "../lib/supabase";
 
 export async function getBestTutorMatches(studentAnswers: Record<string, string>) {
-  // buscar todos os tutores
   const { data: tutors, error } = await supabase.from("tutores").select("*");
   if (error) throw new Error("Erro ao buscar tutores");
 
-  // detectar perguntas dinamicamente
+  if (!tutors || tutors.length === 0) return [];
+
   const questionKeys = Object.keys(studentAnswers).filter(key =>
     key.startsWith("question_")
   );
@@ -19,22 +19,22 @@ export async function getBestTutorMatches(studentAnswers: Record<string, string>
       const sValue = studentAnswers[key];
       const tValue = tutor[key];
 
-      if (!sValue) continue;
-
-      // STRING
-      if (typeof sValue === "string" && tValue === sValue) {
-        total += questionWeight;
+      if (typeof sValue === "string" && typeof tValue === "string") {
+        if (tValue.trim().toLowerCase() === sValue.trim().toLowerCase()) {
+          total += questionWeight;
+        }
       }
     }
 
     return Math.round(total);
   }
 
-  return tutors
-    .map(t => ({
-      tutorId: t.id,
-      compatibility: calculateCompatibility(t),
-    }))
+  const results = tutors.map(t => ({
+    tutorId: t.id as string,
+    compatibility: calculateCompatibility(t),
+  }));
+
+  return results
     .sort((a, b) => b.compatibility - a.compatibility)
-    .slice(0, 3);
+    .slice(0, Math.min(3, results.length));
 }
