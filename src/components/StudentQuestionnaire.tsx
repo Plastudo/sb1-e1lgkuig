@@ -109,7 +109,7 @@ export const StudentQuestionnaire: React.FC = () => {
         const tutorIds = topMatches.map(t => t.tutorId)
 
         const { data: tutorsData, error } = await supabase
-          .from("tutors")
+          .from("tutores")
           .select("*")
           .in("id", tutorIds)
 
