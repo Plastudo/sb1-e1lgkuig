@@ -180,7 +180,7 @@ export const StudentQuestionnaire: React.FC = () => {
                   <div className="text-center mb-4">
                     <img src={tutor.profile_picture} alt={tutor.name} className="w-20 h-20 rounded-full mx-auto mb-3 object-cover"/>
                     <h3 className="text-xl font-semibold text-gray-900 mb-1">{tutor.name}</h3>
-                    <p className="text-green-600 font-medium mb-2">{tutor.subject}</p>
+                    <p className="text-green-600 font-medium mb-2">{tutor.subjects?.[0] || "—"}</p>
                     <div className="flex items-center justify-center space-x-1 mb-3">
                       <Star className="h-4 w-4 fill-yellow-400 text-yellow-400"/>
                       <span className="text-sm font-medium text-gray-700">{tutor.rating || "—"}</span>
