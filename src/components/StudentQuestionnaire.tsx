@@ -48,7 +48,7 @@ const questions: Question[] = [
 
 //---------------- COMPONENTE PRINCIPAL -----------------
 interface TutorMatch {
-  tutorId: number
+  tutorId: string
   compatibility: number
   name?: string
   profile_picture?: string
