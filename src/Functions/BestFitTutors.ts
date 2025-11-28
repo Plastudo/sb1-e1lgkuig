@@ -1,3 +1,5 @@
+import { supabase } from "../lib/supabase";
+
 export async function getBestTutorMatches(studentAnswers: Record<string, string>) {
   // buscar todos os tutores
   const { data: tutors, error } = await supabase.from("tutors").select("*");
