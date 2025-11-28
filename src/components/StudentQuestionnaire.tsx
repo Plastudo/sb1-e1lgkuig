@@ -89,6 +89,7 @@ export const StudentQuestionnaire: React.FC = () => {
 
   //---------------- FUNÇÃO PARA GUARDAR RESPOSTA E AVANÇAR -----------------
   const handleAnswer = async (questionId: number, answer: string) => {
+    // Usa o id real da pergunta
     const updatedAnswers: Record<string, string> = {
       ...answers,
       [`question_${questionId}_answer`]: answer
@@ -235,7 +236,7 @@ export const StudentQuestionnaire: React.FC = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1 }}
-                    onClick={() => handleAnswer(currentQuestion + 1, option.value)}
+                    onClick={() => handleAnswer(question.id, option.value)}
                     className="w-full p-4 text-left border-2 border-gray-200 rounded-2xl hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 group"
                   >
                     <div className="flex items-center justify-between">
