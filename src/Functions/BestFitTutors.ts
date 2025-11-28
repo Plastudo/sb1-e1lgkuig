@@ -55,12 +55,12 @@ export async function getBestTutorMatches(answers: Answers): Promise<TutorMatch[
     return Math.round(total)
   }
 
-  // 4️⃣ Avaliar todos os tutores
+  // Avaliar todos os tutores
   const results = tutors.map(tutor => ({
     tutorId: tutor.id,
     compatibility: calculateCompatibility(tutor)
   }))
 
-  // 5️⃣ Ordenar e pegar top 3
+  // Ordenar e pegar top 3
   return results.sort((a, b) => b.compatibility - a.compatibility).slice(0, 3)
 }
