@@ -15,7 +15,7 @@ interface TutorMatch {
  * @returns top 3 tutors com compatibilidade
  */
 export async function getBestTutorMatches(answers: Answers): Promise<TutorMatch[]> {
-  // 1️⃣ Buscar todos os tutores
+  //  Buscar todos os tutores
   const { data: tutors, error } = await supabase
     .from('tutors')
     .select('*')
@@ -24,11 +24,11 @@ export async function getBestTutorMatches(answers: Answers): Promise<TutorMatch[
     throw new Error('Erro ao buscar tutores')
   }
 
-  // 2️⃣ Detetar todas as "perguntas" nas respostas
+  // Detetar todas as "perguntas" nas respostas
   const questionKeys = Object.keys(answers).filter(key => key.startsWith('question_'))
   const questionWeight = 100 / questionKeys.length
 
-  // 3️⃣ Função de compatibilidade
+  // Função de compatibilidade
   function calculateCompatibility(tutor: any): number {
     let total = 0
 
