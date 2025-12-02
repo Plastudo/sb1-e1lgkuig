@@ -101,7 +101,6 @@ export const StudentQuestionnaire: React.FC = () => {
       } catch (err) {
         console.error("Erro ao processar final do questionário:", err);
         alert("Ocorreu um erro ao processar o questionário. Tente novamente.");
-}
       } finally {
         setLoading(false);
       }
