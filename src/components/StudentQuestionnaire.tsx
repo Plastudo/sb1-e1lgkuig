@@ -75,6 +75,8 @@ export const StudentQuestionnaire: React.FC = () => {
 
   // Trata a resposta do usuário
   const handleAnswer = async (questionId: number, answer: string) => {
+    if (loading) return; // evita múltiplos cliques
+
     const updatedAnswers = {
       ...answers,
       [`question_${questionId}_answer`]: answer,
@@ -86,20 +88,24 @@ export const StudentQuestionnaire: React.FC = () => {
     if (isLastQuestion) {
       setLoading(true);
       try {
+        // Salvar respostas no Supabase
         const studentRecord = await saveAnswersToSupabase(updatedAnswers);
         if (!studentRecord) throw new Error("Falha ao salvar respostas");
 
+        // Obter melhores tutores
         const topMatches = await getBestTutorMatches(updatedAnswers);
         setMatchedTutors(topMatches);
 
-        // Atualiza showResults somente após salvar e obter matches
+        // Mostrar resultados
         setShowResults(true);
       } catch (err) {
         console.error("Erro ao processar final do questionário:", err);
+        alert("Ocorreu um erro ao processar o questionário. Tente novamente.");
       } finally {
         setLoading(false);
       }
     } else {
+      // Próxima pergunta
       setCurrentQuestion((prev) => prev + 1);
     }
   };
@@ -117,6 +123,7 @@ export const StudentQuestionnaire: React.FC = () => {
   };
 
   const goBack = () => {
+    if (loading) return;
     if (showResults) {
       setShowResults(false);
       setCurrentQuestion(questions.length - 1);
