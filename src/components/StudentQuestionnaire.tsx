@@ -1,4 +1,4 @@
-// StudentQuestionnaire.tsx
+// StudentQuestionnaire.tsx 
 import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -98,11 +98,12 @@ export const StudentQuestionnaire: React.FC = () => {
 
         // Mostrar resultados
         setShowResults(true);
-      } catch (err) {
-        console.error("Erro ao processar final do questionário:", err);
-        alert("Ocorreu um erro ao processar o questionário. Tente novamente.");
+      } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        console.error("Erro ao processar final do questionário:", errorMessage);
+        alert("Ocorreu um erro ao processar o questionário. " + errorMessage);
       } finally {
-        setLoading(false);
+        setLoading(false); // corrigido: agora seguro para Vercel/esbuild
       }
     } else {
       // Próxima pergunta
