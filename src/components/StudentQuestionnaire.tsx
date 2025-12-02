@@ -1,27 +1,28 @@
-import React, { useState, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Button } from './ui/button'
-import { Card } from './ui/card'
-import { ChevronRight, ChevronLeft, Check, Star, Mail } from 'lucide-react'
+// StudentQuestionnaire.tsx
+import React, { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "./ui/button";
+import { Card } from "./ui/card";
+import { ChevronRight, ChevronLeft, Check, Star, Mail } from "lucide-react";
 
 // Supabase + UUID
-import { supabase } from '../lib/supabase'
-import { v4 as uuidv4 } from 'uuid'
+import { supabase } from "../lib/supabase";
+import { v4 as uuidv4 } from "uuid";
 
-// Serviço de matching
-import { getBestTutorMatches } from '../Functions/BestFitTutors'
+// Serviço de matching (agora devolve os dados dos tutors)
+import { getBestTutorMatches, TutorMatch } from "../Functions/BestFitTutors";
 
 //---------------- PERGUNTAS ---------------------
 interface QuestionOption {
-  value: string
-  label: string
+  value: string;
+  label: string;
 }
 
 interface Question {
-  id: number
-  title: string
-  options: QuestionOption[]
+  id: number;
+  title: string;
+  options: QuestionOption[];
 }
 
 const questions: Question[] = [
@@ -32,124 +33,113 @@ const questions: Question[] = [
       { value: "matematica", label: "A) Matemática e Ciências Exatas" },
       { value: "linguas", label: "B) Línguas e Literatura" },
       { value: "ciencias", label: "C) Ciências Naturais e Biologia" },
-      { value: "humanas", label: "D) Ciências Humanas e Sociais" }
-    ]
+      { value: "humanas", label: "D) Ciências Humanas e Sociais" },
+    ],
   },
   {
     id: 2,
     title: "Qual a fase escolar?",
     options: [
-      { value: "Básico", label: "A) Ensino Básico" },
-      { value: "Secundário", label: "B) Ensino Secundário" },
-      { value: "Superior", label: "C) Ensino Superior" }
-    ]
-  }
-]
+      { value: "basico", label: "A) Ensino Básico" },
+      { value: "secundario", label: "B) Ensino Secundário" },
+      { value: "superior", label: "C) Ensino Superior" },
+    ],
+  },
+];
 
 //---------------- COMPONENTE PRINCIPAL -----------------
-interface TutorMatch {
-  tutorId: string
-  compatibility: number
-  name?: string
-  profile_picture?: string
-  subjects?: string[]
-  rating?: string
-  bio?: string
-  email?: string
-}
-
 export const StudentQuestionnaire: React.FC = () => {
-  const [currentQuestion, setCurrentQuestion] = useState<number>(0)
-  const [answers, setAnswers] = useState<Record<string, string>>({})
-  const [showResults, setShowResults] = useState<boolean>(false)
-  const [matchedTutors, setMatchedTutors] = useState<TutorMatch[]>([])
-  const navigate = useNavigate()
-  const sessionIdRef = useRef<string>(uuidv4())
+  const [currentQuestion, setCurrentQuestion] = useState<number>(0);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [showResults, setShowResults] = useState<boolean>(false);
+  const [matchedTutors, setMatchedTutors] = useState<TutorMatch[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const navigate = useNavigate();
+  const sessionIdRef = useRef<string>(uuidv4());
 
   //---------------- FUNÇÃO PARA GUARDAR RESPOSTAS -----------------
-  const saveAnswersToSupabase = async (answers: Record<string, string>) => {
+  const saveAnswersToSupabase = async (answersToSave: Record<string, string>) => {
     const payload = {
       session_id: sessionIdRef.current,
-      question_1_answer: answers.question_1_answer || null,
-      question_2_answer: answers.question_2_answer || null,
-    }
+      question_1_answer: answersToSave["question_1_answer"] || null,
+      question_2_answer: answersToSave["question_2_answer"] || null,
+    };
 
     const { data: insertedData, error: insertError } = await supabase
-      .from('temp_students')
+      .from("temp_students")
       .insert([payload])
-      .select()
+      .select();
 
     if (insertError) {
-      console.error("Erro ao salvar respostas:", insertError)
-      return null
+      console.error("Erro ao salvar respostas:", insertError);
+      return null;
     }
 
-    return insertedData[0]
-  }
+    return insertedData && insertedData.length > 0 ? insertedData[0] : null;
+  };
 
   //---------------- FUNÇÃO PARA GUARDAR RESPOSTA E AVANÇAR -----------------
   const handleAnswer = async (questionId: number, answer: string) => {
-    // Usa o id real da pergunta
+    // Cria o objecto actualizado (não dependo do state imediatamente)
     const updatedAnswers: Record<string, string> = {
       ...answers,
-      [`question_${questionId}_answer`]: answer
-    }
+      [`question_${questionId}_answer`]: answer,
+    };
 
-    setAnswers(updatedAnswers)
+    // Actualiza o state (UX)
+    setAnswers(updatedAnswers);
 
-    const isLastQuestion = currentQuestion === questions.length - 1
+    const isLastQuestion = currentQuestion === questions.length - 1;
 
     if (isLastQuestion) {
-      const studentRecord = await saveAnswersToSupabase(updatedAnswers)
-      if (!studentRecord) return
-
+      setLoading(true);
       try {
-        const topMatches = await getBestTutorMatches(updatedAnswers)
-        const tutorIds = topMatches.map(t => t.tutorId)
-
-        const { data: tutorsData, error } = await supabase
-          .from("tutores")
-          .select("*")
-          .in("id", tutorIds)
-
-        if (error) {
-          console.error("Erro ao buscar dados dos tutors:", error)
-          return
+        // Guarda no Supabase
+        const studentRecord = await saveAnswersToSupabase(updatedAnswers);
+        if (!studentRecord) {
+          console.error("Não foi possível guardar o registo do estudante.");
+          setLoading(false);
+          return;
         }
 
-        const finalTutors: TutorMatch[] = topMatches.map(match => ({
-          ...match,
-          ...tutorsData?.find(t => t.id === match.tutorId)
-        }))
+        // Obter matches (retorna já os dados dos tutors)
+        const topMatches = await getBestTutorMatches(updatedAnswers);
 
-        setMatchedTutors(finalTutors)
-        setShowResults(true)
+        setMatchedTutors(topMatches);
+        setShowResults(true);
       } catch (err) {
-        console.error("Erro ao calcular matches:", err)
+        console.error("Erro ao processar final do questionário:", err);
+      } finally {
+        setLoading(false);
       }
     } else {
-      setCurrentQuestion(currentQuestion + 1)
+      // Avança para a próxima pergunta
+      setCurrentQuestion((prev) => prev + 1);
     }
-  }
+  };
 
   //---------------- FUNÇÃO PARA CONTACTAR TUTOR -----------------
-  const handleContactTutor = (email: string, tutorName: string) => {
-    const subject = encodeURIComponent(`Interessado em explicações - Plastudo`)
+  const handleContactTutor = (email?: string | null, tutorName?: string | null) => {
+    if (!email) {
+      alert("Email do tutor indisponível.");
+      return;
+    }
+    const subject = encodeURIComponent(`Interessado em explicações - Plastudo`);
     const body = encodeURIComponent(
-      `Olá ${tutorName},\n\nEncontrei o seu perfil na Plastudo e estou interessado(a) nas suas explicações.\n\nPodemos conversar sobre disponibilidade e condições?\n\nObrigado(a)!`
-    )
-    window.location.href = `mailto:${email}?subject=${subject}&body=${body}`
-  }
+      `Olá ${tutorName || ""},\n\nEncontrei o seu perfil na Plastudo e estou interessado(a) nas suas explicações.\n\nPodemos conversar sobre disponibilidade e condições?\n\nObrigado(a)!`
+    );
+    window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+  };
 
   //---------------- FUNÇÃO PARA VOLTAR ATRÁS -----------------
   const goBack = () => {
     if (showResults) {
-      setShowResults(false)
-      setCurrentQuestion(questions.length - 1)
+      setShowResults(false);
+      setCurrentQuestion(questions.length - 1);
     } else if (currentQuestion > 0) {
-      setCurrentQuestion(currentQuestion - 1)
+      setCurrentQuestion((prev) => prev - 1);
     }
-  }
+  };
 
   //---------------- SEÇÃO DE RESULTADOS -----------------
   if (showResults) {
@@ -161,54 +151,67 @@ export const StudentQuestionnaire: React.FC = () => {
             <p className="text-lg text-gray-600 mb-6">
               Baseado nas suas respostas, encontrámos estes explicadores ideais para si.
             </p>
-            <Button variant="outline" onClick={goBack} className="mb-4">
-              <ChevronLeft className="h-4 w-4 mr-2"/>
+            <Button variant="outline" onClick={goBack} className="mb-4" disabled={loading}>
+              <ChevronLeft className="h-4 w-4 mr-2" />
               Voltar ao questionário
             </Button>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {matchedTutors.map((tutor, index) => (
-              <motion.div
-                key={tutor.tutorId}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-              >
-                <Card className="p-6 h-full hover:shadow-lg transition-all duration-200 border-0 bg-white/80 backdrop-blur-sm">
-                  <div className="text-center mb-4">
-                    <img src={tutor.profile_picture} alt={tutor.name} className="w-20 h-20 rounded-full mx-auto mb-3 object-cover"/>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-1">{tutor.name}</h3>
-                    <p className="text-green-600 font-medium mb-2">{tutor.subjects?.[0] || "—"}</p>
-                    <div className="flex items-center justify-center space-x-1 mb-3">
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400"/>
-                      <span className="text-sm font-medium text-gray-700">{tutor.rating || "—"}</span>
+          {matchedTutors.length === 0 ? (
+            <Card className="p-6 bg-white/80">
+              <p className="text-center text-gray-700">Nenhum tutor encontrado. Por favor tenta novamente mais tarde.</p>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              {matchedTutors.map((tutor, index) => (
+                <motion.div
+                  key={tutor.tutorId}
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.08 }}
+                >
+                  <Card className="p-6 h-full hover:shadow-lg transition-all duration-200 border-0 bg-white/80 backdrop-blur-sm">
+                    <div className="text-center mb-4">
+                      <img
+                        src={tutor.profile_picture || "/default-avatar.png"}
+                        alt={tutor.name || "Tutor"}
+                        className="w-20 h-20 rounded-full mx-auto mb-3 object-cover"
+                      />
+                      <h3 className="text-xl font-semibold text-gray-900 mb-1">{tutor.name || "—"}</h3>
+                      <p className="text-green-600 font-medium mb-2">{tutor.subjects?.[0] || "—"}</p>
+                      <div className="flex items-center justify-center space-x-1 mb-3">
+                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                        <span className="text-sm font-medium text-gray-700">{tutor.rating ?? "—"}</span>
+                      </div>
+                      <p className="text-blue-600 font-semibold text-sm">Compatibilidade: {tutor.compatibility}%</p>
                     </div>
-                    <p className="text-blue-600 font-semibold text-sm">
-                      Compatibilidade: {tutor.compatibility}%
-                    </p>
-                  </div>
 
-                  <p className="text-gray-600 text-sm mb-4 line-clamp-3">{tutor.bio}</p>
+                    <p className="text-gray-600 text-sm mb-4 line-clamp-3">{tutor.bio}</p>
 
-                  <div className="space-y-2">
-                    <Button onClick={() => navigate(`/profile/${tutor.tutorId}`)} variant="outline" className="w-full">Ver perfil completo</Button>
-                    <Button onClick={() => handleContactTutor(tutor.email!, tutor.name!)} className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600">
-                      <Mail className="h-4 w-4 mr-2"/> Contactar
-                    </Button>
-                  </div>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
+                    <div className="space-y-2">
+                      <Button onClick={() => navigate(`/profile/${tutor.tutorId}`)} variant="outline" className="w-full">
+                        Ver perfil completo
+                      </Button>
+                      <Button
+                        onClick={() => handleContactTutor(tutor.email, tutor.name)}
+                        className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
+                      >
+                        <Mail className="h-4 w-4 mr-2" /> Contactar
+                      </Button>
+                    </div>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
-    )
+    );
   }
 
   //---------------- QUESTIONÁRIO -----------------
-  const question = questions[currentQuestion]
-  const progress = ((currentQuestion + 1) / questions.length) * 100
+  const question = questions[currentQuestion];
+  const progress = ((currentQuestion + 1) / questions.length) * 100;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8">
@@ -222,7 +225,9 @@ export const StudentQuestionnaire: React.FC = () => {
               transition={{ duration: 0.5, ease: "easeOut" }}
             />
           </div>
-          <p className="text-sm text-gray-600 mt-2 text-center">Pergunta {currentQuestion + 1} de {questions.length}</p>
+          <p className="text-sm text-gray-600 mt-2 text-center">
+            Pergunta {currentQuestion + 1} de {questions.length}
+          </p>
         </motion.div>
 
         <AnimatePresence mode="wait">
@@ -235,28 +240,29 @@ export const StudentQuestionnaire: React.FC = () => {
                     key={option.value}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1 }}
+                    transition={{ delay: index * 0.06 }}
                     onClick={() => handleAnswer(question.id, option.value)}
                     className="w-full p-4 text-left border-2 border-gray-200 rounded-2xl hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 group"
+                    disabled={loading}
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-lg text-gray-700 group-hover:text-blue-700">{option.label}</span>
-                      <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-blue-500 transform group-hover:translate-x-1 transition-all"/>
+                      <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-blue-500 transform group-hover:translate-x-1 transition-all" />
                     </div>
                   </motion.button>
                 ))}
               </div>
 
               <div className="flex justify-between mt-8">
-                <Button variant="outline" onClick={goBack} disabled={currentQuestion === 0} className="flex items-center space-x-2">
-                  <ChevronLeft className="h-4 w-4"/>
+                <Button variant="outline" onClick={goBack} disabled={currentQuestion === 0 || loading} className="flex items-center space-x-2">
+                  <ChevronLeft className="h-4 w-4" />
                   <span>Anterior</span>
                 </Button>
 
                 <div className="text-sm text-gray-500">
                   {answers[`question_${question.id}_answer`] && (
                     <div className="flex items-center space-x-2 text-blue-600">
-                      <Check className="h-4 w-4"/>
+                      <Check className="h-4 w-4" />
                       <span>Respondido</span>
                     </div>
                   )}
@@ -267,5 +273,5 @@ export const StudentQuestionnaire: React.FC = () => {
         </AnimatePresence>
       </div>
     </div>
-  )
-}
+  );
+};
