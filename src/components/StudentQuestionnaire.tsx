@@ -6,15 +6,10 @@ import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { ChevronRight, ChevronLeft, Check, Star, Mail } from "lucide-react";
 
-// Supabase + UUID
 import { supabase } from "../lib/supabase";
-
 import { v4 as uuidv4 } from "uuid";
-
-// Serviço de matching (agora devolve os dados dos tutors)
 import { getBestTutorMatches, TutorMatch } from "../Functions/BestFitTutors";
 
-//---------------- PERGUNTAS ---------------------
 interface QuestionOption {
   value: string;
   label: string;
@@ -48,7 +43,6 @@ const questions: Question[] = [
   },
 ];
 
-//---------------- COMPONENTE PRINCIPAL -----------------
 export const StudentQuestionnaire: React.FC = () => {
   const [currentQuestion, setCurrentQuestion] = useState<number>(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -58,87 +52,60 @@ export const StudentQuestionnaire: React.FC = () => {
   const navigate = useNavigate();
   const sessionIdRef = useRef<string>(uuidv4());
 
-  //---------------- FUNÇÃO PARA GUARDAR RESPOSTAS -----------------
   const saveAnswersToSupabase = async (answers: Record<string, string>) => {
     const payload = {
       session_id: sessionIdRef.current,
       question_1_answer: answers.question_1_answer || null,
       question_2_answer: answers.question_2_answer || null,
-    }
+    };
 
     const { data, error } = await supabase
-      .from('temp_students')
+      .from("temp_students")
       .insert(payload)
       .select("*")
-      .single()
+      .single();
 
     if (error) {
-      console.error("Erro ao salvar respostas:", error)
-      return null
+      console.error("Erro ao salvar respostas:", error);
+      return null;
     }
 
-    return data
-  }
-
-  //---------------- FUNÇÃO PARA GUARDAR RESPOSTA E AVANÇAR -----------------
-  const handleAnswer = async (questionId: number, answer: string) => {
-  console.log("=== handleAnswer chamado ===");
-  console.log("Pergunta atual:", currentQuestion, "ID:", questionId);
-  console.log("Resposta escolhida:", answer);
-
-  // Atualiza localmente as respostas
-  const updatedAnswers: Record<string, string> = {
-    ...answers,
-    [`question_${questionId}_answer`]: answer,
+    return data;
   };
-  setAnswers(updatedAnswers);
-  console.log("Updated answers:", updatedAnswers);
 
-  const isLastQuestion = currentQuestion === questions.length - 1;
-  console.log("É a última pergunta?", isLastQuestion);
+  const handleAnswer = async (questionId: number, answer: string) => {
+    const updatedAnswers = {
+      ...answers,
+      [`question_${questionId}_answer`]: answer,
+    };
 
-  if (isLastQuestion) {
-    setLoading(true);
-    console.log("Iniciando processamento final...");
+    setAnswers(updatedAnswers);
 
-    try {
-      // Guardar respostas no Supabase
-      const studentRecord = await saveAnswersToSupabase(updatedAnswers);
-      console.log("Registo do estudante retornado:", studentRecord);
+    const isLastQuestion = currentQuestion === questions.length - 1;
 
-      if (!studentRecord) {
-        console.error("Não foi possível guardar o registo do estudante.");
+    if (isLastQuestion) {
+      setLoading(true);
+      try {
+        const studentRecord = await saveAnswersToSupabase(updatedAnswers);
+        if (!studentRecord) throw new Error("Falha ao salvar respostas");
+
+        const topMatches = await getBestTutorMatches(updatedAnswers);
+        setMatchedTutors(topMatches);
+
+        // Pequeno delay para evitar conflitos com AnimatePresence
+        setTimeout(() => {
+          setShowResults(true);
+        }, 100);
+      } catch (err) {
+        console.error("Erro ao processar final do questionário:", err);
+      } finally {
         setLoading(false);
-        return;
       }
-
-      // Obter tutores (debug)
-      console.log("Chamando getBestTutorMatches...");
-      const topMatches = await getBestTutorMatches(updatedAnswers); // ou apenas getBestTutorMatches() se a função não aceitar argumentos
-      console.log("Tutores recebidos:", topMatches);
-
-      if (!topMatches || topMatches.length === 0) {
-        console.warn("Nenhum tutor encontrado.");
-      }
-
-      setMatchedTutors(topMatches);
-      setShowResults(true);
-      console.log("showResults definido como true. Resultados devem aparecer.");
-    } catch (err) {
-      console.error("Erro ao processar final do questionário:", err);
-    } finally {
-      setLoading(false);
-      console.log("Loading definido como false.");
+    } else {
+      setCurrentQuestion((prev) => prev + 1);
     }
-  } else {
-    // Avança para a próxima pergunta
-    console.log("Avançando para a próxima pergunta...");
-    setCurrentQuestion((prev) => prev + 1);
-  }
-};
+  };
 
-
-  //---------------- FUNÇÃO PARA CONTACTAR TUTOR -----------------
   const handleContactTutor = (email?: string | null, tutorName?: string | null) => {
     if (!email) {
       alert("Email do tutor indisponível.");
@@ -151,7 +118,6 @@ export const StudentQuestionnaire: React.FC = () => {
     window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
   };
 
-  //---------------- FUNÇÃO PARA VOLTAR ATRÁS -----------------
   const goBack = () => {
     if (showResults) {
       setShowResults(false);
@@ -161,12 +127,15 @@ export const StudentQuestionnaire: React.FC = () => {
     }
   };
 
-  //---------------- SEÇÃO DE RESULTADOS -----------------
   if (showResults) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8">
         <div className="max-w-6xl mx-auto px-4">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center mb-8"
+          >
             <h2 className="text-3xl font-bold text-gray-900 mb-4">Os seus matches perfeitos!</h2>
             <p className="text-lg text-gray-600 mb-6">
               Baseado nas suas respostas, encontrámos estes explicadores ideais para si.
@@ -229,7 +198,6 @@ export const StudentQuestionnaire: React.FC = () => {
     );
   }
 
-  //---------------- QUESTIONÁRIO -----------------
   const question = questions[currentQuestion];
   const progress = ((currentQuestion + 1) / questions.length) * 100;
 
@@ -251,7 +219,13 @@ export const StudentQuestionnaire: React.FC = () => {
         </motion.div>
 
         <AnimatePresence mode="wait">
-          <motion.div key={currentQuestion} initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} transition={{ duration: 0.3 }}>
+          <motion.div
+            key={currentQuestion}
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -50 }}
+            transition={{ duration: 0.3 }}
+          >
             <Card className="p-8 shadow-xl border-0 bg-white/80 backdrop-blur-sm">
               <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center">{question.title}</h2>
               <div className="space-y-4">
