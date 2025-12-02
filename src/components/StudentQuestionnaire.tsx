@@ -8,6 +8,7 @@ import { ChevronRight, ChevronLeft, Check, Star, Mail } from "lucide-react";
 
 // Supabase + UUID
 import { supabase } from "../lib/supabase";
+
 import { v4 as uuidv4 } from "uuid";
 
 // Serviço de matching (agora devolve os dados dos tutors)
@@ -81,43 +82,61 @@ export const StudentQuestionnaire: React.FC = () => {
 
   //---------------- FUNÇÃO PARA GUARDAR RESPOSTA E AVANÇAR -----------------
   const handleAnswer = async (questionId: number, answer: string) => {
-    // Cria o objecto actualizado (não dependo do state imediatamente)
-    const updatedAnswers: Record<string, string> = {
-      ...answers,
-      [`question_${questionId}_answer`]: answer,
-    };
+  console.log("=== handleAnswer chamado ===");
+  console.log("Pergunta atual:", currentQuestion, "ID:", questionId);
+  console.log("Resposta escolhida:", answer);
 
-    // Actualiza o state (UX)
-    setAnswers(updatedAnswers);
-
-    const isLastQuestion = currentQuestion === questions.length - 1;
-
-    if (isLastQuestion) {
-      setLoading(true);
-      try {
-        // Guarda no Supabase
-        const studentRecord = await saveAnswersToSupabase(updatedAnswers);
-        if (!studentRecord) {
-          console.error("Não foi possível guardar o registo do estudante.");
-          setLoading(false);
-          return;
-        }
-
-        // Obter matches (retorna já os dados dos tutors)
-        const topMatches = await getBestTutorMatches(updatedAnswers);
-
-        setMatchedTutors(topMatches);
-        setShowResults(true);
-      } catch (err) {
-        console.error("Erro ao processar final do questionário:", err);
-      } finally {
-        setLoading(false);
-      }
-    } else {
-      // Avança para a próxima pergunta
-      setCurrentQuestion((prev) => prev + 1);
-    }
+  // Atualiza localmente as respostas
+  const updatedAnswers: Record<string, string> = {
+    ...answers,
+    [`question_${questionId}_answer`]: answer,
   };
+  setAnswers(updatedAnswers);
+  console.log("Updated answers:", updatedAnswers);
+
+  const isLastQuestion = currentQuestion === questions.length - 1;
+  console.log("É a última pergunta?", isLastQuestion);
+
+  if (isLastQuestion) {
+    setLoading(true);
+    console.log("Iniciando processamento final...");
+
+    try {
+      // Guardar respostas no Supabase
+      const studentRecord = await saveAnswersToSupabase(updatedAnswers);
+      console.log("Registo do estudante retornado:", studentRecord);
+
+      if (!studentRecord) {
+        console.error("Não foi possível guardar o registo do estudante.");
+        setLoading(false);
+        return;
+      }
+
+      // Obter tutores (debug)
+      console.log("Chamando getBestTutorMatches...");
+      const topMatches = await getBestTutorMatches(updatedAnswers); // ou apenas getBestTutorMatches() se a função não aceitar argumentos
+      console.log("Tutores recebidos:", topMatches);
+
+      if (!topMatches || topMatches.length === 0) {
+        console.warn("Nenhum tutor encontrado.");
+      }
+
+      setMatchedTutors(topMatches);
+      setShowResults(true);
+      console.log("showResults definido como true. Resultados devem aparecer.");
+    } catch (err) {
+      console.error("Erro ao processar final do questionário:", err);
+    } finally {
+      setLoading(false);
+      console.log("Loading definido como false.");
+    }
+  } else {
+    // Avança para a próxima pergunta
+    console.log("Avançando para a próxima pergunta...");
+    setCurrentQuestion((prev) => prev + 1);
+  }
+};
+
 
   //---------------- FUNÇÃO PARA CONTACTAR TUTOR -----------------
   const handleContactTutor = (email?: string | null, tutorName?: string | null) => {
