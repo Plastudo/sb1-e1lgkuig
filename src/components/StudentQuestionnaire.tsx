@@ -231,4 +231,37 @@ export const StudentQuestionnaire: React.FC = () => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.06 }}
-                    onClick={(
+                    onClick={() => handleAnswer(question.id, option.value)}
+                    className="w-full p-4 text-left border-2 border-gray-200 rounded-2xl hover:border-blue-400 hover:bg-blue-50 transition-all duration-200 group"
+                    disabled={loading}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-lg text-gray-700 group-hover:text-blue-700">{option.label}</span>
+                      <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-blue-500 transform group-hover:translate-x-1 transition-all" />
+                    </div>
+                  </motion.button>
+                ))}
+              </div>
+
+              <div className="flex justify-between mt-8">
+                <Button variant="outline" onClick={goBack} disabled={currentQuestion === 0 || loading} className="flex items-center space-x-2">
+                  <ChevronLeft className="h-4 w-4" />
+                  <span>Anterior</span>
+                </Button>
+
+                <div className="text-sm text-gray-500">
+                  {answers[`question_${question.id}_answer`] && (
+                    <div className="flex items-center space-x-2 text-blue-600">
+                      <Check className="h-4 w-4" />
+                      <span>Respondido</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+};
