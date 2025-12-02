@@ -1,11 +1,9 @@
-// StudentQuestionnaire.tsx
 import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { ChevronRight, ChevronLeft, Check, Star, Mail } from "lucide-react";
-
 import { supabase } from "../lib/supabase";
 import { v4 as uuidv4 } from "uuid";
 import { getBestTutorMatches, TutorMatch } from "../Functions/BestFitTutors";
@@ -49,6 +47,7 @@ export const StudentQuestionnaire: React.FC = () => {
   const [showResults, setShowResults] = useState<boolean>(false);
   const [matchedTutors, setMatchedTutors] = useState<TutorMatch[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+
   const navigate = useNavigate();
   const sessionIdRef = useRef<string>(uuidv4());
 
@@ -59,13 +58,11 @@ export const StudentQuestionnaire: React.FC = () => {
       question_1_answer: answers.question_1_answer || null,
       question_2_answer: answers.question_2_answer || null,
     };
-
     const { data, error } = await supabase
       .from("temp_students")
       .insert(payload)
       .select("*")
       .single();
-
     if (error) {
       console.error("Erro ao salvar respostas:", error);
       return null;
@@ -75,37 +72,25 @@ export const StudentQuestionnaire: React.FC = () => {
 
   // Trata a resposta do usuário
   const handleAnswer = async (questionId: number, answer: string) => {
-    if (loading) return; // evita múltiplos cliques
-
-    const updatedAnswers = {
-      ...answers,
-      [`question_${questionId}_answer`]: answer,
-    };
+    const updatedAnswers = { ...answers, [`question_${questionId}_answer`]: answer };
     setAnswers(updatedAnswers);
 
     const isLastQuestion = currentQuestion === questions.length - 1;
-
     if (isLastQuestion) {
       setLoading(true);
       try {
-        // Salvar respostas no Supabase
         const studentRecord = await saveAnswersToSupabase(updatedAnswers);
         if (!studentRecord) throw new Error("Falha ao salvar respostas");
 
-        // Obter melhores tutores
         const topMatches = await getBestTutorMatches(updatedAnswers);
         setMatchedTutors(topMatches);
-
-        // Mostrar resultados
         setShowResults(true);
       } catch (err) {
         console.error("Erro ao processar final do questionário:", err);
-        alert("Ocorreu um erro ao processar o questionário. Tente novamente.");
       } finally {
         setLoading(false);
       }
     } else {
-      // Próxima pergunta
       setCurrentQuestion((prev) => prev + 1);
     }
   };
@@ -115,7 +100,7 @@ export const StudentQuestionnaire: React.FC = () => {
       alert("Email do tutor indisponível.");
       return;
     }
-    const subject = encodeURIComponent(`Interessado em explicações - Plastudo`);
+    const subject = encodeURIComponent("Interessado em explicações - Plastudo");
     const body = encodeURIComponent(
       `Olá ${tutorName || ""},\n\nEncontrei o seu perfil na Plastudo e estou interessado(a) nas suas explicações.\n\nPodemos conversar sobre disponibilidade e condições?\n\nObrigado(a)!`
     );
@@ -123,7 +108,6 @@ export const StudentQuestionnaire: React.FC = () => {
   };
 
   const goBack = () => {
-    if (loading) return;
     if (showResults) {
       setShowResults(false);
       setCurrentQuestion(questions.length - 1);
@@ -143,11 +127,9 @@ export const StudentQuestionnaire: React.FC = () => {
               Baseado nas suas respostas, encontrámos estes explicadores ideais para si.
             </p>
             <Button variant="outline" onClick={goBack} className="mb-4" disabled={loading}>
-              <ChevronLeft className="h-4 w-4 mr-2" />
-              Voltar ao questionário
+              <ChevronLeft className="h-4 w-4 mr-2" /> Voltar ao questionário
             </Button>
           </motion.div>
-
           {matchedTutors.length === 0 ? (
             <Card className="p-6 bg-white/80">
               <p className="text-center text-gray-700">Nenhum tutor encontrado. Por favor tenta novamente mais tarde.</p>
@@ -176,9 +158,7 @@ export const StudentQuestionnaire: React.FC = () => {
                       </div>
                       <p className="text-blue-600 font-semibold text-sm">Compatibilidade: {tutor.compatibility}%</p>
                     </div>
-
                     <p className="text-gray-600 text-sm mb-4 line-clamp-3">{tutor.bio}</p>
-
                     <div className="space-y-2">
                       <Button onClick={() => navigate(`/profile/${tutor.tutorId}`)} variant="outline" className="w-full">
                         Ver perfil completo
@@ -220,7 +200,6 @@ export const StudentQuestionnaire: React.FC = () => {
             Pergunta {currentQuestion + 1} de {questions.length}
           </p>
         </motion.div>
-
         <AnimatePresence mode="wait">
           <motion.div
             key={currentQuestion}
@@ -249,13 +228,11 @@ export const StudentQuestionnaire: React.FC = () => {
                   </motion.button>
                 ))}
               </div>
-
               <div className="flex justify-between mt-8">
                 <Button variant="outline" onClick={goBack} disabled={currentQuestion === 0 || loading} className="flex items-center space-x-2">
                   <ChevronLeft className="h-4 w-4" />
                   <span>Anterior</span>
                 </Button>
-
                 <div className="text-sm text-gray-500">
                   {answers[`question_${question.id}_answer`] && (
                     <div className="flex items-center space-x-2 text-blue-600">
