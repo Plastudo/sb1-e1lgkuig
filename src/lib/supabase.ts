@@ -31,7 +31,7 @@ export type TutorData = {
 export type TempStudentData = {
   id?: string
   session_id: string
-  question_1: string
-  question_2: string
+  question_1_answer: string
+  question_2_answer: string
   created_at?: string
 }
