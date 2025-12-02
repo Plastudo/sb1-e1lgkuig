@@ -88,24 +88,21 @@ export const StudentQuestionnaire: React.FC = () => {
     if (isLastQuestion) {
       setLoading(true);
       try {
-        // Salvar respostas
         const studentRecord = await saveAnswersToSupabase(updatedAnswers);
         if (!studentRecord) throw new Error("Falha ao salvar respostas");
 
-        // Obter melhores tutores
         const topMatches = await getBestTutorMatches(updatedAnswers);
         setMatchedTutors(topMatches);
 
-        // Mostrar resultados
         setShowResults(true);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error("Erro ao processar final do questionário:", err);
-        alert("Ocorreu um erro ao processar o questionário. " + err.message);
+        const message = err instanceof Error ? err.message : String(err);
+        alert("Ocorreu um erro ao processar o questionário. " + message);
       } finally {
         setLoading(false);
       }
     } else {
-      // Próxima pergunta
       setCurrentQuestion((prev) => prev + 1);
     }
   };
