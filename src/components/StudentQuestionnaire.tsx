@@ -52,6 +52,7 @@ export const StudentQuestionnaire: React.FC = () => {
   const navigate = useNavigate();
   const sessionIdRef = useRef<string>(uuidv4());
 
+  // Salva respostas no Supabase
   const saveAnswersToSupabase = async (answers: Record<string, string>) => {
     const payload = {
       session_id: sessionIdRef.current,
@@ -69,16 +70,15 @@ export const StudentQuestionnaire: React.FC = () => {
       console.error("Erro ao salvar respostas:", error);
       return null;
     }
-
     return data;
   };
 
+  // Trata resposta do usuário
   const handleAnswer = async (questionId: number, answer: string) => {
     const updatedAnswers = {
       ...answers,
       [`question_${questionId}_answer`]: answer,
     };
-
     setAnswers(updatedAnswers);
 
     const isLastQuestion = currentQuestion === questions.length - 1;
@@ -92,10 +92,8 @@ export const StudentQuestionnaire: React.FC = () => {
         const topMatches = await getBestTutorMatches(updatedAnswers);
         setMatchedTutors(topMatches);
 
-        // Pequeno delay para evitar conflitos com AnimatePresence
-        setTimeout(() => {
-          setShowResults(true);
-        }, 100);
+        // Atualiza showResults apenas quando todos os dados estiverem prontos
+        setShowResults(true);
       } catch (err) {
         console.error("Erro ao processar final do questionário:", err);
       } finally {
@@ -127,15 +125,12 @@ export const StudentQuestionnaire: React.FC = () => {
     }
   };
 
+  // ---------- Renderização de resultados ----------
   if (showResults) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8">
         <div className="max-w-6xl mx-auto px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-8"
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-8">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">Os seus matches perfeitos!</h2>
             <p className="text-lg text-gray-600 mb-6">
               Baseado nas suas respostas, encontrámos estes explicadores ideais para si.
@@ -198,6 +193,7 @@ export const StudentQuestionnaire: React.FC = () => {
     );
   }
 
+  // ---------- Renderização do questionário ----------
   const question = questions[currentQuestion];
   const progress = ((currentQuestion + 1) / questions.length) * 100;
 
