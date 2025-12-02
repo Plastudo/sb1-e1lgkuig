@@ -58,25 +58,26 @@ export const StudentQuestionnaire: React.FC = () => {
   const sessionIdRef = useRef<string>(uuidv4());
 
   //---------------- FUNÇÃO PARA GUARDAR RESPOSTAS -----------------
-  const saveAnswersToSupabase = async (answersToSave: Record<string, string>) => {
+  const saveAnswersToSupabase = async (answers: Record<string, string>) => {
     const payload = {
       session_id: sessionIdRef.current,
-      question_1_answer: answersToSave["question_1_answer"] || null,
-      question_2_answer: answersToSave["question_2_answer"] || null,
-    };
-
-    const { data: insertedData, error: insertError } = await supabase
-      .from("temp_students")
-      .insert([payload])
-      .select();
-
-    if (insertError) {
-      console.error("Erro ao salvar respostas:", insertError);
-      return null;
+      question_1_answer: answers.question_1_answer || null,
+      question_2_answer: answers.question_2_answer || null,
     }
 
-    return insertedData && insertedData.length > 0 ? insertedData[0] : null;
-  };
+    const { data, error } = await supabase
+      .from('temp_students')
+      .insert(payload)
+      .select("*")
+      .single()
+
+    if (error) {
+      console.error("Erro ao salvar respostas:", error)
+      return null
+    }
+
+    return data
+  }
 
   //---------------- FUNÇÃO PARA GUARDAR RESPOSTA E AVANÇAR -----------------
   const handleAnswer = async (questionId: number, answer: string) => {
