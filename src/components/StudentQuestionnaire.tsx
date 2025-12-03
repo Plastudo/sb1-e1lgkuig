@@ -1,3 +1,4 @@
+// StudentQuestionnaire.tsx
 import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -51,46 +52,83 @@ export const StudentQuestionnaire: React.FC = () => {
   const navigate = useNavigate();
   const sessionIdRef = useRef<string>(uuidv4());
 
+  // DEBUG - render
+  console.log("🟦 COMPONENTE RENDERIZADO");
+  console.log("➡ currentQuestion:", currentQuestion);
+  console.log("➡ answers:", answers);
+  console.log("➡ showResults:", showResults);
+
   // Salva respostas no Supabase
   const saveAnswersToSupabase = async (answers: Record<string, string>) => {
+    console.log("🟦 saveAnswersToSupabase() chamado com:", answers);
+
     const payload = {
       session_id: sessionIdRef.current,
       question_1_answer: answers.question_1_answer || null,
       question_2_answer: answers.question_2_answer || null,
     };
+
+    console.log("➡ Payload enviado para Supabase:", payload);
+
     const { data, error } = await supabase
       .from("temp_students")
       .insert(payload)
       .select("*")
       .single();
+
     if (error) {
-      console.error("Erro ao salvar respostas:", error);
+      console.error("❌ Erro ao salvar no Supabase:", error);
       return null;
     }
+
+    console.log("🟩 Resposta Supabase:", data);
     return data;
   };
 
   // Trata a resposta do usuário
   const handleAnswer = async (questionId: number, answer: string) => {
+    console.log("🟩 handleAnswer DISPARADO");
+    console.log("➡ Pergunta respondida:", questionId);
+    console.log("➡ Resposta selecionada:", answer);
+
     const updatedAnswers = { ...answers, [`question_${questionId}_answer`]: answer };
+    console.log("➡ updatedAnswers:", updatedAnswers);
+
     setAnswers(updatedAnswers);
 
     const isLastQuestion = currentQuestion === questions.length - 1;
-    if (isLastQuestion) {
-      setLoading(true);
-      try {
-        const studentRecord = await saveAnswersToSupabase(updatedAnswers);
-        if (!studentRecord) throw new Error("Falha ao salvar respostas");
+    console.log("➡ É última pergunta?", isLastQuestion);
 
+    if (isLastQuestion) {
+      console.log("🔥 Última pergunta atingida — iniciando processamento final...");
+      setLoading(true);
+
+      try {
+        console.log("📝 A guardar respostas no Supabase...");
+        const studentRecord = await saveAnswersToSupabase(updatedAnswers);
+        console.log("🟧 Resultado do insert Supabase:", studentRecord);
+
+        if (!studentRecord) {
+          console.error("❌ Erro: studentRecord retornou null");
+          throw new Error("Falha ao salvar respostas");
+        }
+
+        console.log("🔎 A buscar melhores tutores...");
         const topMatches = await getBestTutorMatches(updatedAnswers);
+
+        console.log("🟩 Top matches encontrados:", topMatches);
+
         setMatchedTutors(topMatches);
         setShowResults(true);
+
+        console.log("🎉 showResults agora TRUE");
       } catch (err) {
-        console.error("Erro ao processar final do questionário:", err);
+        console.error("❌ Erro ao processar final:", err);
       } finally {
         setLoading(false);
       }
     } else {
+      console.log("➡ Avançando para a próxima pergunta...");
       setCurrentQuestion((prev) => prev + 1);
     }
   };
@@ -118,6 +156,8 @@ export const StudentQuestionnaire: React.FC = () => {
 
   // ---------- Renderização de resultados ----------
   if (showResults) {
+    console.log("🟩 A renderizar página de resultados...");
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8">
         <div className="max-w-6xl mx-auto px-4">
@@ -184,6 +224,8 @@ export const StudentQuestionnaire: React.FC = () => {
   const question = questions[currentQuestion];
   const progress = ((currentQuestion + 1) / questions.length) * 100;
 
+  console.log("🟦 Renderizando pergunta:", question.id);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8">
       <div className="max-w-4xl mx-auto px-4">
@@ -229,7 +271,12 @@ export const StudentQuestionnaire: React.FC = () => {
                 ))}
               </div>
               <div className="flex justify-between mt-8">
-                <Button variant="outline" onClick={goBack} disabled={currentQuestion === 0 || loading} className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={goBack}
+                  disabled={currentQuestion === 0 || loading}
+                  className="flex items-center space-x-2"
+                >
                   <ChevronLeft className="h-4 w-4" />
                   <span>Anterior</span>
                 </Button>
