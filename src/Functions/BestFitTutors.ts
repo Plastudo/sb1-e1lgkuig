@@ -28,8 +28,8 @@ function normalizeString(input?: string | null) {
  * Recebe um objecto studentAnswers onde as chaves são "question_1_answer", "question_2_answer", ...
  * Retorna até 3 melhores matches, cada um já com campos do tutor (name, email, etc).
  */
-export async function getBestTutorMatches(studentAnswers: Record<string, string>): Promise<TutorMatch[]> {
-  // Busca todos os tutores (podes otimizar com filtros mais tarde)
+export async function getBestTutorMatches(studentAnswers: Record<string, any>): Promise<TutorMatch[]> {
+  // Busca todos os tutores
   const { data: tutors, error } = await supabase.from("tutores").select("*");
 
   if (error) {
@@ -44,7 +44,7 @@ export async function getBestTutorMatches(studentAnswers: Record<string, string>
   // Obter as chaves do studentAnswers que começam por "question_"
   const questionKeys = Object.keys(studentAnswers).filter((k) => k.startsWith("question_"));
 
-  // Se não houver perguntas, devolve top 3 por rating (fallback)
+  // Fallback: Sem perguntas → retornar top 3 por rating
   if (questionKeys.length === 0) {
     const fallback = tutors
       .map((t: any) => ({
@@ -59,46 +59,62 @@ export async function getBestTutorMatches(studentAnswers: Record<string, string>
       }))
       .sort((a, b) => (b.rating || 0) - (a.rating || 0))
       .slice(0, 3);
+
     return fallback;
   }
 
+  // Peso igual para todas as perguntas
   const questionWeight = 100 / questionKeys.length;
 
+  /**
+   * Cálculo completo da compatibilidade do tutor
+   */
   function calculateCompatibility(tutor: any) {
     let total = 0;
 
     for (const key of questionKeys) {
-      const sValueRaw = studentAnswers[key];
-      // Alguns registos de tutor podem ter os campos com null / undefined
-      const tValueRaw = (tutor as any)[key];
+      const sRaw = studentAnswers[key];
+      const tRaw = tutor[key];
 
-      const sValue = normalizeString(sValueRaw);
-      const tValue = normalizeString(tValueRaw);
+      // Transformar em array mesmo se for string simples
+      const sValues = Array.isArray(sRaw)
+        ? sRaw.map(normalizeString)
+        : [normalizeString(sRaw)];
 
-      if (sValue !== "" && tValue !== "") {
-        if (tValue === sValue) {
-          total += questionWeight;
+      const tValues = Array.isArray(tRaw)
+        ? tRaw.map(normalizeString)
+        : [normalizeString(tRaw)];
+
+      // Remover vazios
+      const studentItems = sValues.filter((v) => v !== "");
+      const tutorItems = tValues.filter((v) => v !== "");
+
+      if (studentItems.length === 0 || tutorItems.length === 0) continue;
+
+      // ---- Compatibilidade por pergunta ----
+      let matches = 0;
+
+      for (const sVal of studentItems) {
+        if (tutorItems.includes(sVal)) {
+          matches += 1; // match exato
         } else {
-          // Pequena heurística: se tutor.subjects contém sValue (ex: "matematica"), dá meia-pontuação
-          try {
-            const tutorSubjects: string[] = Array.isArray(tutor.subjects) ? tutor.subjects.map(String) : [];
-            const normalizedSubjects = tutorSubjects.map(normalizeString);
-            if (normalizedSubjects.some((sub) => sub.includes(sValue))) {
-              total += questionWeight * 0.5;
-            }
-          } catch (e) {
-            // ignore
+          // match parcial
+          if (tutorItems.some((tVal) => tVal.includes(sVal))) {
+            matches += 0.5;
           }
         }
       }
+
+      // percentagem da pergunta
+      const questionScore = (matches / studentItems.length) * questionWeight;
+      total += questionScore;
     }
 
-    // Garantir número inteiro 0..100
     const rounded = Math.max(0, Math.min(100, Math.round(total)));
     return rounded;
   }
 
-  // Calcula resultados
+  // Calcula todos os resultados
   const results: TutorMatch[] = tutors.map((t: any) => ({
     tutorId: String(t.id),
     compatibility: calculateCompatibility(t),
@@ -110,7 +126,7 @@ export async function getBestTutorMatches(studentAnswers: Record<string, string>
     email: t.email || null,
   }));
 
-  // Se todas compatibilidades forem 0, devolve top 3 por rating (fallback)
+  // Fallback: todos com compatibilidade 0 → ordenar por rating
   const anyPositive = results.some((r) => r.compatibility > 0);
 
   if (!anyPositive) {
@@ -119,7 +135,7 @@ export async function getBestTutorMatches(studentAnswers: Record<string, string>
       .slice(0, Math.min(3, results.length));
   }
 
-  // Caso normal: devolve top 3 por compatibilidade (se empate, por rating)
+  // Caso normal: ordenar por compatibilidade e depois rating
   return results
     .sort((a, b) => {
       if (b.compatibility !== a.compatibility) return b.compatibility - a.compatibility;
