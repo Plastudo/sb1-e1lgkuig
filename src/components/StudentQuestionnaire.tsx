@@ -8,6 +8,7 @@ import { ChevronRight, ChevronLeft, Check, Star, Mail } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { v4 as uuidv4 } from "uuid";
 import { getBestTutorMatches, TutorMatch } from "../Functions/BestFitTutors";
+import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 
 interface QuestionOption {
   value: string;
@@ -118,7 +119,6 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         ))}
       </div>
 
-      {/* Botão continuar exclusivo para MULTI */}
       {isMulti && (
         <div className="mt-8 text-center">
           <Button
@@ -135,37 +135,110 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 };
 
 // ------------------------------
+// COMPONENTE RANKING FINAL MODERNO
+// ------------------------------
+const RankingQuestion: React.FC<{
+  questions: Question[];
+  answers: Record<string, string | string[]>;
+  onComplete: (ranking: { questionId: string; rank: number }[]) => void;
+}> = ({ questions, answers, onComplete }) => {
+  const [items, setItems] = useState(
+    questions.map((q) => ({
+      id: q.id.toString(),
+      title: q.title,
+      answer: answers[`question_${q.id}_answer`],
+    }))
+  );
+
+  const onDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
+    const newItems = Array.from(items);
+    const [removed] = newItems.splice(result.source.index, 1);
+    newItems.splice(result.destination.index, 0, removed);
+    setItems(newItems);
+  };
+
+  const handleFinish = () => {
+    const ranking = items.map((item, index) => ({
+      questionId: item.id,
+      rank: index + 1,
+    }));
+    onComplete(ranking);
+  };
+
+  return (
+    <Card className="p-8 shadow-2xl border-0 bg-gradient-to-br from-blue-50 via-green-50 to-yellow-50 backdrop-blur-sm">
+      <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center">
+        Ordene as perguntas anteriores por importância
+      </h2>
+
+      <DragDropContext onDragEnd={onDragEnd}>
+        <Droppable droppableId="ranking">
+          {(provided) => (
+            <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
+              {items.map((item, index) => (
+                <Draggable key={item.id} draggableId={item.id} index={index}>
+                  {(provided, snapshot) => (
+                    <motion.div
+                      ref={provided.innerRef}
+                      {...provided.draggableProps}
+                      {...provided.dragHandleProps}
+                      initial={{ scale: 1 }}
+                      animate={{ scale: snapshot.isDragging ? 1.03 : 1 }}
+                      transition={{ duration: 0.2 }}
+                      className={`flex items-center justify-between p-4 rounded-2xl shadow-md cursor-grab
+                        ${
+                          snapshot.isDragging
+                            ? "bg-gradient-to-r from-blue-200 via-green-200 to-yellow-200 shadow-xl"
+                            : "bg-white border border-gray-200"
+                        }`}
+                    >
+                      <span className="text-gray-800 font-medium text-lg">{item.title}</span>
+                      <span className="text-gray-400 text-xl select-none">⇅</span>
+                    </motion.div>
+                  )}
+                </Draggable>
+              ))}
+              {provided.placeholder}
+            </div>
+          )}
+        </Droppable>
+      </DragDropContext>
+
+      <div className="mt-8 text-center">
+        <Button
+          onClick={handleFinish}
+          className="px-6 py-2 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-full shadow hover:from-blue-700 hover:to-green-600 transition-all"
+        >
+          Finalizar Questionário
+        </Button>
+      </div>
+    </Card>
+  );
+};
+
+// ------------------------------
 // COMPONENTE PRINCIPAL
 // ------------------------------
 export const StudentQuestionnaire: React.FC = () => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
   const [showResults, setShowResults] = useState(false);
+  const [showRanking, setShowRanking] = useState(false);
   const [matchedTutors, setMatchedTutors] = useState<TutorMatch[]>([]);
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
   const sessionIdRef = useRef<string>(uuidv4());
 
-  // --------------------------------
-  // SALVAR RESPOSTAS NO SUPABASE
-  // --------------------------------
-  const saveAnswersToSupabase = async (answers: Record<string, string | string[]>) => {
-    const payload = {
-      session_id: sessionIdRef.current,
-      question_1_answer: answers.question_1_answer || null,
-      question_2_answer: answers.question_2_answer || null,
-      question_3_answer: answers.question_3_answer || null,
-    };
-
+  const saveAnswersToSupabase = async (answers: Record<string, string | string[] | number>) => {
+    const payload: Record<string, any> = { session_id: sessionIdRef.current };
+    Object.entries(answers).forEach(([key, value]) => (payload[key] = value));
     const { data, error } = await supabase.from("temp_students").insert(payload).select("*").single();
     if (error) return null;
     return data;
   };
 
-  // --------------------------------
-  // HANDLER GENÉRICO ESCALÁVEL
-  // --------------------------------
   const handleSelect = (questionId: number, value: string) => {
     const question = questions.find((q) => q.id === questionId);
     const key = `question_${questionId}_answer`;
@@ -174,9 +247,7 @@ export const StudentQuestionnaire: React.FC = () => {
 
     if (question?.multiple) {
       const current = Array.isArray(updated[key]) ? (updated[key] as string[]) : [];
-      updated[key] = current.includes(value)
-        ? current.filter((v) => v !== value)
-        : [...current, value];
+      updated[key] = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
     } else {
       updated[key] = value;
       advanceIfSingle(questionId, updated);
@@ -185,39 +256,28 @@ export const StudentQuestionnaire: React.FC = () => {
     setAnswers(updated);
   };
 
-  // Avança automaticamente em perguntas single
   const advanceIfSingle = async (
     questionId: number,
     updatedAnswers: Record<string, string | string[]>
   ) => {
     const isLast = currentQuestion === questions.length - 1;
-
     if (!isLast) {
       setCurrentQuestion((prev) => prev + 1);
       return;
     }
-
-    await finalize(updatedAnswers);
+    setShowRanking(true);
   };
 
-  // Continuar manual para MULTI SELECT
   const continueMulti = async () => {
-    const questionId = questions[currentQuestion].id;
     const isLast = currentQuestion === questions.length - 1;
-    const updated = answers;
-
     if (!isLast) {
       setCurrentQuestion((prev) => prev + 1);
       return;
     }
-
-    await finalize(updated);
+    setShowRanking(true);
   };
 
-  // --------------------------------
-  // PROCESSAMENTO FINAL
-  // --------------------------------
-  const finalize = async (updatedAnswers: Record<string, string | string[]>) => {
+  const finalize = async (updatedAnswers: Record<string, any>) => {
     setLoading(true);
     try {
       await saveAnswersToSupabase(updatedAnswers);
@@ -233,14 +293,13 @@ export const StudentQuestionnaire: React.FC = () => {
     if (showResults) {
       setShowResults(false);
       setCurrentQuestion(questions.length - 1);
+    } else if (showRanking) {
+      setShowRanking(false);
     } else if (currentQuestion > 0) {
       setCurrentQuestion((prev) => prev - 1);
     }
   };
 
-  // ------------------------------
-  // RESULTADOS
-  // ------------------------------
   if (showResults) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8">
@@ -307,9 +366,22 @@ export const StudentQuestionnaire: React.FC = () => {
     );
   }
 
-  // ------------------------------
-  // QUESTIONÁRIO
-  // ------------------------------
+  if (showRanking) {
+    return (
+      <RankingQuestion
+        questions={questions}
+        answers={answers}
+        onComplete={(ranking) => {
+          const rankedAnswers: Record<string, any> = { ...answers };
+          ranking.forEach((r) => {
+            rankedAnswers[`question_${r.questionId}_rank`] = r.rank;
+          });
+          finalize(rankedAnswers);
+        }}
+      />
+    );
+  }
+
   const question = questions[currentQuestion];
   const progress = ((currentQuestion + 1) / questions.length) * 100;
   const answerKey = `question_${question.id}_answer`;
