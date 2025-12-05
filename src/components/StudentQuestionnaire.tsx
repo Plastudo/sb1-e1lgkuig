@@ -13,8 +13,13 @@ import {
   DndContext,
   closestCenter,
   PointerSensor,
+  TouchSensor,
+  KeyboardSensor,
   useSensor,
   useSensors,
+  DragOverlay,
+  DragEndEvent,
+  DragStartEvent,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -23,6 +28,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 
 // ------------------------------
 // PERGUNTAS DO QUESTIONÁRIO
@@ -74,7 +80,7 @@ const questions: Question[] = [
 ];
 
 // ------------------------------
-// COMPONENTE QuestionCard
+// COMPONENTE QuestionCard (igual ao anterior)
 // ------------------------------
 interface QuestionCardProps {
   question: Question;
@@ -101,7 +107,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   const disableContinue = isMulti && (!answer || (Array.isArray(answer) && answer.length === 0));
 
   return (
-    <Card className="p-8 shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+    <Card className="p-8 shadow-xl border-0 bg-white/80 backdrop-blur-sm w-full">
       <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center">{question.title}</h2>
       <div className="space-y-4">
         {question.options.map((option, index) => (
@@ -118,9 +124,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 : "border-gray-200 hover:border-blue-400 hover:bg-blue-50"}`}
           >
             <div className="flex items-center justify-between">
-              <span
-                className={`text-lg ${isSelected(option.value) ? "text-blue-700" : "text-gray-700"}`}
-              >
+              <span className={`text-lg ${isSelected(option.value) ? "text-blue-700" : "text-gray-700"}`}>
                 {option.label}
               </span>
               {isSelected(option.value) ? (
@@ -149,61 +153,99 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 };
 
 // ------------------------------
-// COMPONENTE RANKING FLUIDO COM @dnd-kit
+// RENDER DO ITEM (usado como card, full-width)
 // ------------------------------
 interface RankingItem {
   id: string;
   title: string;
-  answer: string | string[];
+  answer: string | string[] | undefined;
 }
 
 const SortableItem: React.FC<{ item: RankingItem }> = ({ item }) => {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id });
-  const style = {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+  });
+
+  const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition,
+    touchAction: "none", // evita comportamentos nativos que atrapalham drag em mobile
   };
+
   return (
     <motion.div
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
-      className="flex items-center justify-between p-4 rounded-2xl shadow-md cursor-grab bg-white border border-gray-200"
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 1.05 }}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      layout
+      className={`w-full`}
     >
-      <span className="text-gray-800 font-medium text-lg">{item.title}</span>
-      <span className="text-gray-400 text-xl select-none">⇅</span>
+      {/* Use o mesmo Card para manter a aparência idêntica às outras perguntas */}
+      <Card
+        className={`w-full p-4 rounded-2xl shadow-md border-0 transition-transform ${
+          isDragging ? "shadow-xl scale-103" : ""
+        }`}
+      >
+        <div className="flex items-center justify-between">
+          <div className="text-left">
+            <div className="text-gray-800 font-medium text-lg">{item.title}</div>
+            {/* pequena pré-visualização da resposta */}
+            {item.answer && (
+              <div className="text-sm text-gray-500 mt-1 line-clamp-2">
+                {Array.isArray(item.answer) ? item.answer.join(", ") : item.answer}
+              </div>
+            )}
+          </div>
+
+          <div className="ml-4 text-gray-400 text-2xl select-none">⇅</div>
+        </div>
+      </Card>
     </motion.div>
   );
 };
 
+// ------------------------------
+// COMPONENTE RANKING (corrigido & fluido)
+// ------------------------------
 const RankingQuestion: React.FC<{
   questions: Question[];
   answers: Record<string, string | string[]>;
   onComplete: (ranking: { questionId: string; rank: number }[]) => void;
 }> = ({ questions, answers, onComplete }) => {
-  const [items, setItems] = useState<RankingItem[]>(
-    questions.map((q) => ({
-      id: q.id.toString(),
-      title: q.title,
-      answer: answers[`question_${q.id}_answer`],
-    }))
-  );
+  // items com ids estáveis (strings)
+  const initial = questions.map((q) => ({
+    id: q.id.toString(),
+    title: q.title,
+    answer: answers[`question_${q.id}_answer`],
+  }));
+  const [items, setItems] = useState<RankingItem[]>(initial);
 
+  // estado do overlay para mostrar o card enquanto arrasta
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  // sensores: pointer + touch + keyboard
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 5 }, // mais responsivo
-    })
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), // pointer mais responsivo
+    useSensor(TouchSensor, { activationConstraint: { delay: 120, tolerance: 5 } }),
+    useSensor(KeyboardSensor)
   );
 
-  const handleDragEnd = (event: any) => {
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(String(event.active.id));
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+    setActiveId(null);
+
     if (over && active.id !== over.id) {
-      const oldIndex = items.findIndex((i) => i.id === active.id);
-      const newIndex = items.findIndex((i) => i.id === over.id);
-      setItems(arrayMove(items, oldIndex, newIndex));
+      const oldIndex = items.findIndex((i) => i.id === String(active.id));
+      const newIndex = items.findIndex((i) => i.id === String(over.id));
+      setItems((prev) => arrayMove(prev, oldIndex, newIndex));
     }
   };
 
@@ -215,31 +257,65 @@ const RankingQuestion: React.FC<{
     onComplete(ranking);
   };
 
+  // procura o item ativo para o overlay
+  const activeItem = activeId ? items.find((i) => i.id === activeId) ?? null : null;
+
   return (
-    <Card className="p-8 shadow-2xl border-0 bg-gradient-to-br from-blue-50 via-green-50 to-yellow-50 backdrop-blur-sm">
-      <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center">
-        Ordene as perguntas anteriores por importância
-      </h2>
+    <div className="min-h-screen flex items-start justify-center py-8">
+      <div className="w-full max-w-4xl px-4">
+        <Card className="p-8 shadow-2xl border-0 bg-gradient-to-br from-blue-50 via-green-50 to-yellow-50 backdrop-blur-sm">
+          <h2 className="text-2xl font-bold text-gray-900 mb-8 text-center">
+            Ordene as perguntas anteriores por importância
+          </h2>
 
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-4">
-            {items.map((item) => (
-              <SortableItem key={item.id} item={item} />
-            ))}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            modifiers={[restrictToVerticalAxis]}
+          >
+            <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+              <div className="space-y-4">
+                {items.map((item) => (
+                  <SortableItem key={item.id} item={item} />
+                ))}
+              </div>
+            </SortableContext>
+
+            <DragOverlay>
+              {activeItem ? (
+                // versão overlay do item (mantém aparência do card)
+                <div style={{ width: "100%" }}>
+                  <Card className="w-full p-4 rounded-2xl shadow-xl border-0">
+                    <div className="flex items-center justify-between">
+                      <div className="text-left">
+                        <div className="text-gray-800 font-medium text-lg">{activeItem.title}</div>
+                        {activeItem.answer && (
+                          <div className="text-sm text-gray-500 mt-1 line-clamp-2">
+                            {Array.isArray(activeItem.answer) ? activeItem.answer.join(", ") : activeItem.answer}
+                          </div>
+                        )}
+                      </div>
+                      <div className="ml-4 text-gray-400 text-2xl select-none">⇅</div>
+                    </div>
+                  </Card>
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+
+          <div className="mt-8 text-center">
+            <Button
+              onClick={handleFinish}
+              className="px-6 py-2 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-full shadow hover:from-blue-700 hover:to-green-600 transition-all"
+            >
+              Finalizar Questionário
+            </Button>
           </div>
-        </SortableContext>
-      </DndContext>
-
-      <div className="mt-8 text-center">
-        <Button
-          onClick={handleFinish}
-          className="px-6 py-2 bg-gradient-to-r from-blue-600 to-green-500 text-white rounded-full shadow hover:from-blue-700 hover:to-green-600 transition-all"
-        >
-          Finalizar Questionário
-        </Button>
+        </Card>
       </div>
-    </Card>
+    </div>
   );
 };
 
@@ -304,7 +380,6 @@ export const StudentQuestionnaire: React.FC = () => {
   };
 
   if (showResults) {
-    // render resultados (igual ao código anterior)
     return (
       <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8">
         <div className="max-w-6xl mx-auto px-4">
@@ -358,7 +433,9 @@ export const StudentQuestionnaire: React.FC = () => {
         answers={answers}
         onComplete={(ranking) => {
           const rankedAnswers: Record<string, any> = { ...answers };
-          ranking.forEach((r) => { rankedAnswers[`question_${r.questionId}_rank`] = r.rank; });
+          ranking.forEach((r) => {
+            rankedAnswers[`question_${r.questionId}_rank`] = r.rank;
+          });
           finalize(rankedAnswers);
         }}
       />
