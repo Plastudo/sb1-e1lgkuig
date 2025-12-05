@@ -8,8 +8,25 @@ import { ChevronRight, ChevronLeft, Check, Star, Mail } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { v4 as uuidv4 } from "uuid";
 import { getBestTutorMatches, TutorMatch } from "../Functions/BestFitTutors";
-import { DragDropContext, Droppable, Draggable, DropResult } from "react-beautiful-dnd";
 
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+// ------------------------------
+// PERGUNTAS DO QUESTIONÁRIO
+// ------------------------------
 interface QuestionOption {
   value: string;
   label: string;
@@ -22,9 +39,6 @@ interface Question {
   multiple?: boolean;
 }
 
-// ------------------------------
-// PERGUNTAS DO QUESTIONÁRIO
-// ------------------------------
 const questions: Question[] = [
   {
     id: 1,
@@ -60,7 +74,7 @@ const questions: Question[] = [
 ];
 
 // ------------------------------
-// COMPONENTE MODULAR QuestionCard
+// COMPONENTE QuestionCard
 // ------------------------------
 interface QuestionCardProps {
   question: Question;
@@ -135,14 +149,42 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 };
 
 // ------------------------------
-// COMPONENTE RANKING FINAL MODERNO
+// COMPONENTE RANKING FLUIDO COM @dnd-kit
 // ------------------------------
+interface RankingItem {
+  id: string;
+  title: string;
+  answer: string | string[];
+}
+
+const SortableItem: React.FC<{ item: RankingItem }> = ({ item }) => {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+  return (
+    <motion.div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="flex items-center justify-between p-4 rounded-2xl shadow-md cursor-grab bg-white border border-gray-200"
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 1.05 }}
+    >
+      <span className="text-gray-800 font-medium text-lg">{item.title}</span>
+      <span className="text-gray-400 text-xl select-none">⇅</span>
+    </motion.div>
+  );
+};
+
 const RankingQuestion: React.FC<{
   questions: Question[];
   answers: Record<string, string | string[]>;
   onComplete: (ranking: { questionId: string; rank: number }[]) => void;
 }> = ({ questions, answers, onComplete }) => {
-  const [items, setItems] = useState(
+  const [items, setItems] = useState<RankingItem[]>(
     questions.map((q) => ({
       id: q.id.toString(),
       title: q.title,
@@ -150,12 +192,19 @@ const RankingQuestion: React.FC<{
     }))
   );
 
-  const onDragEnd = (result: DropResult) => {
-    if (!result.destination) return;
-    const newItems = Array.from(items);
-    const [removed] = newItems.splice(result.source.index, 1);
-    newItems.splice(result.destination.index, 0, removed);
-    setItems(newItems);
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 }, // mais responsivo
+    })
+  );
+
+  const handleDragEnd = (event: any) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = items.findIndex((i) => i.id === active.id);
+      const newIndex = items.findIndex((i) => i.id === over.id);
+      setItems(arrayMove(items, oldIndex, newIndex));
+    }
   };
 
   const handleFinish = () => {
@@ -172,38 +221,15 @@ const RankingQuestion: React.FC<{
         Ordene as perguntas anteriores por importância
       </h2>
 
-      <DragDropContext onDragEnd={onDragEnd}>
-        <Droppable droppableId="ranking">
-          {(provided) => (
-            <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-4">
-              {items.map((item, index) => (
-                <Draggable key={item.id} draggableId={item.id} index={index}>
-                  {(provided, snapshot) => (
-                    <motion.div
-                      ref={provided.innerRef}
-                      {...provided.draggableProps}
-                      {...provided.dragHandleProps}
-                      initial={{ scale: 1 }}
-                      animate={{ scale: snapshot.isDragging ? 1.03 : 1 }}
-                      transition={{ duration: 0.2 }}
-                      className={`flex items-center justify-between p-4 rounded-2xl shadow-md cursor-grab
-                        ${
-                          snapshot.isDragging
-                            ? "bg-gradient-to-r from-blue-200 via-green-200 to-yellow-200 shadow-xl"
-                            : "bg-white border border-gray-200"
-                        }`}
-                    >
-                      <span className="text-gray-800 font-medium text-lg">{item.title}</span>
-                      <span className="text-gray-400 text-xl select-none">⇅</span>
-                    </motion.div>
-                  )}
-                </Draggable>
-              ))}
-              {provided.placeholder}
-            </div>
-          )}
-        </Droppable>
-      </DragDropContext>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+          <div className="space-y-4">
+            {items.map((item) => (
+              <SortableItem key={item.id} item={item} />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
 
       <div className="mt-8 text-center">
         <Button
@@ -218,33 +244,28 @@ const RankingQuestion: React.FC<{
 };
 
 // ------------------------------
-// COMPONENTE PRINCIPAL
+// COMPONENTE PRINCIPAL StudentQuestionnaire
 // ------------------------------
 export const StudentQuestionnaire: React.FC = () => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
-  const [showResults, setShowResults] = useState(false);
   const [showRanking, setShowRanking] = useState(false);
+  const [showResults, setShowResults] = useState(false);
   const [matchedTutors, setMatchedTutors] = useState<TutorMatch[]>([]);
   const [loading, setLoading] = useState(false);
-
+  const sessionIdRef = useRef(uuidv4());
   const navigate = useNavigate();
-  const sessionIdRef = useRef<string>(uuidv4());
 
-  const saveAnswersToSupabase = async (answers: Record<string, string | string[] | number>) => {
-    const payload: Record<string, any> = { session_id: sessionIdRef.current };
-    Object.entries(answers).forEach(([key, value]) => (payload[key] = value));
-    const { data, error } = await supabase.from("temp_students").insert(payload).select("*").single();
-    if (error) return null;
-    return data;
+  const saveAnswersToSupabase = async (updatedAnswers: Record<string, any>) => {
+    const payload = { session_id: sessionIdRef.current, ...updatedAnswers };
+    await supabase.from("temp_students").insert(payload).select("*").single();
   };
 
   const handleSelect = (questionId: number, value: string) => {
-    const question = questions.find((q) => q.id === questionId);
     const key = `question_${questionId}_answer`;
+    const question = questions.find((q) => q.id === questionId);
 
     let updated = { ...answers };
-
     if (question?.multiple) {
       const current = Array.isArray(updated[key]) ? (updated[key] as string[]) : [];
       updated[key] = current.includes(value) ? current.filter((v) => v !== value) : [...current, value];
@@ -252,55 +273,38 @@ export const StudentQuestionnaire: React.FC = () => {
       updated[key] = value;
       advanceIfSingle(questionId, updated);
     }
-
     setAnswers(updated);
   };
 
-  const advanceIfSingle = async (
-    questionId: number,
-    updatedAnswers: Record<string, string | string[]>
-  ) => {
+  const advanceIfSingle = (questionId: number, updatedAnswers: Record<string, string | string[]>) => {
     const isLast = currentQuestion === questions.length - 1;
-    if (!isLast) {
-      setCurrentQuestion((prev) => prev + 1);
-      return;
-    }
-    setShowRanking(true);
+    if (!isLast) setCurrentQuestion((prev) => prev + 1);
+    else setShowRanking(true);
   };
 
-  const continueMulti = async () => {
+  const continueMulti = () => {
     const isLast = currentQuestion === questions.length - 1;
-    if (!isLast) {
-      setCurrentQuestion((prev) => prev + 1);
-      return;
-    }
-    setShowRanking(true);
+    if (!isLast) setCurrentQuestion((prev) => prev + 1);
+    else setShowRanking(true);
   };
 
   const finalize = async (updatedAnswers: Record<string, any>) => {
     setLoading(true);
-    try {
-      await saveAnswersToSupabase(updatedAnswers);
-      const topMatches = await getBestTutorMatches(updatedAnswers);
-      setMatchedTutors(topMatches);
-      setShowResults(true);
-    } finally {
-      setLoading(false);
-    }
+    await saveAnswersToSupabase(updatedAnswers);
+    const matches = await getBestTutorMatches(updatedAnswers);
+    setMatchedTutors(matches);
+    setShowResults(true);
+    setLoading(false);
   };
 
   const goBack = () => {
-    if (showResults) {
-      setShowResults(false);
-      setCurrentQuestion(questions.length - 1);
-    } else if (showRanking) {
-      setShowRanking(false);
-    } else if (currentQuestion > 0) {
-      setCurrentQuestion((prev) => prev - 1);
-    }
+    if (showResults) setShowResults(false);
+    else if (showRanking) setShowRanking(false);
+    else if (currentQuestion > 0) setCurrentQuestion((prev) => prev - 1);
   };
 
   if (showResults) {
+    // render resultados (igual ao código anterior)
     return (
       <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8">
         <div className="max-w-6xl mx-auto px-4">
@@ -313,51 +317,32 @@ export const StudentQuestionnaire: React.FC = () => {
               <ChevronLeft className="h-4 w-4 mr-2" /> Voltar ao questionário
             </Button>
           </motion.div>
-
           {matchedTutors.length === 0 ? (
             <Card className="p-6 bg-white/80">
               <p className="text-center text-gray-700">Nenhum tutor encontrado. Por favor tenta novamente mais tarde.</p>
             </Card>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {matchedTutors.map((tutor, index) => (
-                <motion.div
-                  key={tutor.tutorId}
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.08 }}
-                >
-                  <Card className="p-6 h-full hover:shadow-lg transition-all duration-200 border-0 bg-white/80 backdrop-blur-sm">
-                    <div className="text-center mb-4">
-                      <img
-                        src={tutor.profile_picture || "/default-avatar.png"}
-                        alt={tutor.name || "Tutor"}
-                        className="w-20 h-20 rounded-full mx-auto mb-3 object-cover"
-                      />
-                      <h3 className="text-xl font-semibold text-gray-900 mb-1">{tutor.name || "—"}</h3>
-                      <p className="text-green-600 font-medium mb-2">{tutor.subjects?.[0] || "—"}</p>
-                      <div className="flex items-center justify-center space-x-1 mb-3">
-                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                        <span className="text-sm font-medium text-gray-700">{tutor.rating ?? "—"}</span>
-                      </div>
-                      <p className="text-blue-600 font-semibold text-sm">Compatibilidade: {tutor.compatibility}%</p>
+              {matchedTutors.map((tutor) => (
+                <Card key={tutor.tutorId} className="p-6 h-full hover:shadow-lg transition-all duration-200 border-0 bg-white/80 backdrop-blur-sm">
+                  <div className="text-center mb-4">
+                    <img src={tutor.profile_picture || "/default-avatar.png"} alt={tutor.name || "Tutor"} className="w-20 h-20 rounded-full mx-auto mb-3 object-cover" />
+                    <h3 className="text-xl font-semibold text-gray-900 mb-1">{tutor.name || "—"}</h3>
+                    <p className="text-green-600 font-medium mb-2">{tutor.subjects?.[0] || "—"}</p>
+                    <div className="flex items-center justify-center space-x-1 mb-3">
+                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                      <span className="text-sm font-medium text-gray-700">{tutor.rating ?? "—"}</span>
                     </div>
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-3">{tutor.bio}</p>
-                    <div className="space-y-2">
-                      <Button onClick={() => navigate(`/profile/${tutor.tutorId}`)} variant="outline" className="w-full">
-                        Ver perfil completo
-                      </Button>
-                      <Button
-                        onClick={() =>
-                          window.location.href = `mailto:${tutor.email}?subject=Contacto&body=Olá ${tutor.name}`
-                        }
-                        className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
-                      >
-                        <Mail className="h-4 w-4 mr-2" /> Contactar
-                      </Button>
-                    </div>
-                  </Card>
-                </motion.div>
+                    <p className="text-blue-600 font-semibold text-sm">Compatibilidade: {tutor.compatibility}%</p>
+                  </div>
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-3">{tutor.bio}</p>
+                  <div className="space-y-2">
+                    <Button onClick={() => navigate(`/profile/${tutor.tutorId}`)} variant="outline" className="w-full">Ver perfil completo</Button>
+                    <Button onClick={() => window.location.href = `mailto:${tutor.email}?subject=Contacto&body=Olá ${tutor.name}`} className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600">
+                      <Mail className="h-4 w-4 mr-2" /> Contactar
+                    </Button>
+                  </div>
+                </Card>
               ))}
             </div>
           )}
@@ -373,9 +358,7 @@ export const StudentQuestionnaire: React.FC = () => {
         answers={answers}
         onComplete={(ranking) => {
           const rankedAnswers: Record<string, any> = { ...answers };
-          ranking.forEach((r) => {
-            rankedAnswers[`question_${r.questionId}_rank`] = r.rank;
-          });
+          ranking.forEach((r) => { rankedAnswers[`question_${r.questionId}_rank`] = r.rank; });
           finalize(rankedAnswers);
         }}
       />
@@ -391,12 +374,7 @@ export const StudentQuestionnaire: React.FC = () => {
       <div className="max-w-4xl mx-auto px-4">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <div className="bg-white rounded-full h-3 overflow-hidden shadow-sm">
-            <motion.div
-              className="h-full bg-gradient-to-r from-blue-400 to-green-400"
-              initial={{ width: 0 }}
-              animate={{ width: `${progress}%` }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
-            />
+            <motion.div className="h-full bg-gradient-to-r from-blue-400 to-green-400" initial={{ width: 0 }} animate={{ width: `${progress}%` }} transition={{ duration: 0.5, ease: "easeOut" }} />
           </div>
           <p className="text-sm text-gray-600 mt-2 text-center">
             Pergunta {currentQuestion + 1} de {questions.length}
@@ -404,13 +382,7 @@ export const StudentQuestionnaire: React.FC = () => {
         </motion.div>
 
         <AnimatePresence mode="wait">
-          <motion.div
-            key={currentQuestion}
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
-            transition={{ duration: 0.3 }}
-          >
+          <motion.div key={currentQuestion} initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} transition={{ duration: 0.3 }}>
             <QuestionCard
               question={question}
               answer={answers[answerKey]}
@@ -420,16 +392,10 @@ export const StudentQuestionnaire: React.FC = () => {
             />
 
             <div className="flex justify-between mt-8">
-              <Button
-                variant="outline"
-                onClick={goBack}
-                disabled={currentQuestion === 0 || loading}
-                className="flex items-center space-x-2"
-              >
+              <Button variant="outline" onClick={goBack} disabled={currentQuestion === 0 || loading} className="flex items-center space-x-2">
                 <ChevronLeft className="h-4 w-4" />
                 <span>Anterior</span>
               </Button>
-
               <div className="text-sm text-gray-500">
                 {answers[answerKey] && (
                   <div className="flex items-center space-x-2 text-blue-600">
