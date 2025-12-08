@@ -33,9 +33,9 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 
-/* -------------------------------------
-   QUESTION MODEL
-------------------------------------- */
+// -------------------------------------
+// QUESTION MODEL
+// -------------------------------------
 interface QuestionOption {
   value: string;
   label: string;
@@ -82,9 +82,9 @@ const questions: Question[] = [
   },
 ];
 
-/* -------------------------------------
-   COMPONENT: Progress Bar
-------------------------------------- */
+// -------------------------------------
+// COMPONENT: Progress Bar
+// -------------------------------------
 const ProgressBar = ({ value, max }: { value: number; max: number }) => {
   const pct = (value / max) * 100;
 
@@ -105,9 +105,9 @@ const ProgressBar = ({ value, max }: { value: number; max: number }) => {
   );
 };
 
-/* -------------------------------------
-   COMPONENT: QuestionCard
-------------------------------------- */
+// -------------------------------------
+// COMPONENT: QuestionCard
+// -------------------------------------
 const QuestionCard = ({
   question,
   answer,
@@ -124,11 +124,11 @@ const QuestionCard = ({
   const isMulti = question.multiple;
 
   const isSelected = (val: string) =>
-    isMulti && Array.isArray(answer)
-      ? answer.includes(val)
-      : answer === val;
+    isMulti && Array.isArray(answer) ? answer.includes(val) : answer === val;
 
-  const disable = isMulti && (!answer || (Array.isArray(answer) && answer.length === 0));
+  const disable =
+    isMulti &&
+    (!answer || (Array.isArray(answer) && answer.length === 0));
 
   return (
     <Card className="p-8 shadow-xl border-0 bg-white/80 backdrop-blur-sm w-full">
@@ -146,18 +146,27 @@ const QuestionCard = ({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
             className={`w-full p-4 text-left border-2 rounded-2xl transition-all duration-200
-              ${isSelected(option.value)
-                ? "border-blue-500 bg-blue-100"
-                : "border-gray-200 hover:border-blue-400 hover:bg-blue-50"
+              ${
+                isSelected(option.value)
+                  ? "border-blue-500 bg-blue-100"
+                  : "border-gray-200 hover:border-blue-400 hover:bg-blue-50"
               }`}
           >
             <div className="flex items-center justify-between">
-              <span className={`text-lg ${isSelected(option.value) ? "text-blue-700" : "text-gray-700"}`}>
+              <span
+                className={`text-lg ${
+                  isSelected(option.value)
+                    ? "text-blue-700"
+                    : "text-gray-700"
+                }`}
+              >
                 {option.label}
               </span>
-              {isSelected(option.value)
-                ? <Check className="h-5 w-5 text-blue-600" />
-                : <ChevronRight className="h-5 w-5 text-gray-400" />}
+              {isSelected(option.value) ? (
+                <Check className="h-5 w-5 text-blue-600" />
+              ) : (
+                <ChevronRight className="h-5 w-5 text-gray-400" />
+              )}
             </div>
           </motion.button>
         ))}
@@ -178,34 +187,46 @@ const QuestionCard = ({
   );
 };
 
-/* -------------------------------------
-   COMPONENT: Sortable Ranking Item
-------------------------------------- */
+// -------------------------------------
+// COMPONENT: SortableRankingItem (CORRIGIDO)
+// -------------------------------------
 const SortableRankingItem = ({ item }: { item: any }) => {
-  const { setNodeRef, attributes, listeners, transform, transition, isDragging } =
-    useSortable({ id: item.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
+  const {
+    setNodeRef,
+    attributes,
+    listeners,
+    transform,
     transition,
-    touchAction: "manipulation",
-  };
+    isDragging,
+  } = useSortable({ id: item.id });
 
   return (
-    <div ref={setNodeRef} {...attributes} {...listeners} style={style}>
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+      }}
+      {...attributes}
+      {...listeners}
+      className="touch-none"
+    >
       <Card
-        className={`w-full p-4 rounded-2xl border-2 mb-2 transition-all
-          ${isDragging
+        className={`w-full p-4 rounded-2xl border-2 mb-3 transition-all duration-200
+        ${
+          isDragging
             ? "border-blue-500 bg-blue-100 shadow-xl scale-[1.02]"
             : "border-gray-200 bg-white hover:border-blue-400 hover:bg-blue-50"
-          }`}
+        }`}
       >
         <div className="flex items-center justify-between">
           <div>
             <p className="text-lg text-gray-800 font-medium">{item.title}</p>
             {item.answer && (
               <p className="text-sm text-gray-500 mt-1">
-                {Array.isArray(item.answer) ? item.answer.join(", ") : item.answer}
+                {Array.isArray(item.answer)
+                  ? item.answer.join(", ")
+                  : item.answer}
               </p>
             )}
           </div>
@@ -216,9 +237,9 @@ const SortableRankingItem = ({ item }: { item: any }) => {
   );
 };
 
-/* -------------------------------------
-   COMPONENT: RankingQuestion
-------------------------------------- */
+// -------------------------------------
+// COMPONENT: RankingQuestion (CORRIGIDO)
+// -------------------------------------
 const RankingQuestion = ({
   questions,
   answers,
@@ -228,7 +249,7 @@ const RankingQuestion = ({
   answers: Record<string, any>;
   onComplete: (ranking: any[]) => void;
 }) => {
-  const initialItems = questions.map(q => ({
+  const initialItems = questions.map((q) => ({
     id: q.id.toString(),
     title: q.title,
     answer: answers[`question_${q.id}_answer`],
@@ -252,19 +273,20 @@ const RankingQuestion = ({
     setActiveId(null);
 
     if (over && active.id !== over.id) {
-      const oldIndex = items.findIndex(i => i.id === active.id);
-      const newIndex = items.findIndex(i => i.id === over.id);
-      setItems(prev => arrayMove(prev, oldIndex, newIndex));
+      const oldIndex = items.findIndex((i) => i.id === active.id);
+      const newIndex = items.findIndex((i) => i.id === over.id);
+      setItems((prev) => arrayMove(prev, oldIndex, newIndex));
     }
   };
 
-  const activeItem =
-    activeId ? items.find(i => i.id === activeId) ?? null : null;
+  const activeItem = activeId
+    ? items.find((i) => i.id === activeId) ?? null
+    : null;
 
   return (
-    <div className="min-h-screen py-8 flex justify-center">
-      <div className="max-w-3xl w-full px-4">
-        <Card className="p-8 shadow-xl bg-white/80 border-0">
+    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8">
+      <div className="max-w-4xl mx-auto px-4">
+        <Card className="p-8 shadow-xl border-0 bg-white/80 backdrop-blur-sm">
           <h2 className="text-2xl font-bold text-center text-gray-900 mb-8">
             Ordene as perguntas anteriores por importância
           </h2>
@@ -276,9 +298,9 @@ const RankingQuestion = ({
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-            <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
+            <SortableContext items={items} strategy={verticalListSortingStrategy}>
               <div className="space-y-3">
-                {items.map(item => (
+                {items.map((item) => (
                   <SortableRankingItem key={item.id} item={item} />
                 ))}
               </div>
@@ -289,7 +311,9 @@ const RankingQuestion = ({
                 <Card className="w-full p-4 rounded-2xl border-2 border-blue-500 bg-blue-100 shadow-xl">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-lg text-gray-800 font-medium">{activeItem.title}</p>
+                      <p className="text-lg text-gray-800 font-medium">
+                        {activeItem.title}
+                      </p>
                       {activeItem.answer && (
                         <p className="text-sm text-gray-600 mt-1">
                           {Array.isArray(activeItem.answer)
@@ -308,10 +332,12 @@ const RankingQuestion = ({
           <div className="text-center mt-8">
             <Button
               onClick={() =>
-                onComplete(items.map((i, idx) => ({
-                  questionId: i.id,
-                  rank: idx + 1,
-                })))
+                onComplete(
+                  items.map((i, idx) => ({
+                    questionId: i.id,
+                    rank: idx + 1,
+                  }))
+                )
               }
               className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-6 py-2"
             >
@@ -324,9 +350,9 @@ const RankingQuestion = ({
   );
 };
 
-/* -------------------------------------
-   COMPONENT: TutorResults
-------------------------------------- */
+// -------------------------------------
+// COMPONENT: TutorResults
+// -------------------------------------
 const TutorResults = ({
   tutors,
   goBack,
@@ -341,10 +367,17 @@ const TutorResults = ({
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8">
       <div className="max-w-6xl mx-auto px-4">
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-3">Os seus matches perfeitos!</h2>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="text-center mb-8"
+        >
+          <h2 className="text-3xl font-bold text-gray-900 mb-3">
+            Os seus matches perfeitos!
+          </h2>
           <p className="text-gray-600 mb-4">
-            Baseado nas suas respostas, encontrámos estes explicadores ideais para si.
+            Baseado nas suas respostas, encontrámos estes explicadores ideais
+            para si.
           </p>
 
           <Button variant="outline" onClick={goBack} disabled={loading}>
@@ -360,7 +393,7 @@ const TutorResults = ({
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {tutors.map(t => (
+            {tutors.map((t) => (
               <Card
                 key={t.tutorId}
                 className="p-6 bg-white/80 shadow hover:shadow-lg transition rounded-2xl"
@@ -371,8 +404,12 @@ const TutorResults = ({
                     className="w-20 h-20 rounded-full mx-auto object-cover mb-3"
                   />
 
-                  <h3 className="text-xl font-semibold">{t.name || "—"}</h3>
-                  <p className="text-green-600 font-medium">{t.subjects?.[0] || "—"}</p>
+                  <h3 className="text-xl font-semibold">
+                    {t.name || "—"}
+                  </h3>
+                  <p className="text-green-600 font-medium">
+                    {t.subjects?.[0] || "—"}
+                  </p>
 
                   <div className="flex justify-center items-center space-x-1 mt-2">
                     <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
@@ -397,7 +434,9 @@ const TutorResults = ({
                 <div className="mt-4 space-y-2">
                   <Button
                     variant="outline"
-                    onClick={() => navigate(`/profile/${t.tutorId}`)}
+                    onClick={() =>
+                      navigate(`/profile/${t.tutorId}`)
+                    }
                     className="w-full"
                   >
                     Ver perfil completo
@@ -421,9 +460,9 @@ const TutorResults = ({
   );
 };
 
-/* -------------------------------------
-   MAIN COMPONENT
-------------------------------------- */
+// -------------------------------------
+// MAIN COMPONENT
+// -------------------------------------
 export const StudentQuestionnaire = () => {
   const navigate = useNavigate();
   const sessionIdRef = useRef(uuidv4());
@@ -444,20 +483,20 @@ export const StudentQuestionnaire = () => {
 
   const handleSelect = (qId: number, value: string) => {
     const key = `question_${qId}_answer`;
-    const question = questions.find(q => q.id === qId);
+    const question = questions.find((q) => q.id === qId);
 
     const updated = { ...answers };
 
     if (question?.multiple) {
       const prev = Array.isArray(updated[key]) ? updated[key] : [];
       updated[key] = prev.includes(value)
-        ? prev.filter(v => v !== value)
+        ? prev.filter((v: string) => v !== value)
         : [...prev, value];
     } else {
       updated[key] = value;
 
       if (current < questions.length - 1) {
-        setCurrent(v => v + 1);
+        setCurrent((v) => v + 1);
       } else {
         setRankingMode(true);
       }
@@ -467,7 +506,7 @@ export const StudentQuestionnaire = () => {
   };
 
   const continueMulti = () => {
-    if (current < questions.length - 1) setCurrent(v => v + 1);
+    if (current < questions.length - 1) setCurrent((v) => v + 1);
     else setRankingMode(true);
   };
 
@@ -484,20 +523,22 @@ export const StudentQuestionnaire = () => {
   const goBack = () => {
     if (resultsMode) setResultsMode(false);
     else if (rankingMode) setRankingMode(false);
-    else if (current > 0) setCurrent(v => v - 1);
+    else if (current > 0) setCurrent((v) => v - 1);
   };
 
   if (resultsMode)
-    return <TutorResults tutors={matched} goBack={goBack} loading={loading} />;
+    return (
+      <TutorResults tutors={matched} goBack={goBack} loading={loading} />
+    );
 
   if (rankingMode)
     return (
       <RankingQuestion
         questions={questions}
         answers={answers}
-        onComplete={ranking => {
+        onComplete={(ranking) => {
           const merged = { ...answers };
-          ranking.forEach(r => {
+          ranking.forEach((r) => {
             merged[`question_${r.questionId}_rank`] = r.rank;
           });
           finalize(merged);
@@ -525,7 +566,7 @@ export const StudentQuestionnaire = () => {
               question={question}
               answer={answers[answerKey]}
               loading={loading}
-              onSelect={value => handleSelect(question.id, value)}
+              onSelect={(value) => handleSelect(question.id, value)}
               onContinue={continueMulti}
             />
 
