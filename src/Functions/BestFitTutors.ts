@@ -11,8 +11,11 @@ export interface TutorMatch {
   email?: string | null;
 }
 
+// Parâmetro p do método de potência
+const P = 1.5;
+
 /**
- * Normaliza strings: remove acentos, trim e toLowerCase
+ * Normaliza strings
  */
 function normalizeString(input?: string | null) {
   if (input === undefined || input === null) return "";
@@ -24,12 +27,10 @@ function normalizeString(input?: string | null) {
     .toLowerCase();
 }
 
-/**
- * Recebe um objecto studentAnswers onde as chaves são "question_1_answer", "question_2_answer", ...
- * Retorna até 3 melhores matches, cada um já com campos do tutor (name, email, etc).
- */
-export async function getBestTutorMatches(studentAnswers: Record<string, string>): Promise<TutorMatch[]> {
-  // Busca todos os tutores (podes otimizar com filtros mais tarde)
+export async function getBestTutorMatches(
+  studentAnswers: Record<string, any>
+): Promise<TutorMatch[]> {
+  // Buscar tutores
   const { data: tutors, error } = await supabase.from("tutores").select("*");
 
   if (error) {
@@ -37,16 +38,20 @@ export async function getBestTutorMatches(studentAnswers: Record<string, string>
     throw new Error("Erro ao buscar tutores");
   }
 
-  if (!tutors || tutors.length === 0) {
-    return [];
-  }
+  if (!tutors || tutors.length === 0) return [];
 
-  // Obter as chaves do studentAnswers que começam por "question_"
-  const questionKeys = Object.keys(studentAnswers).filter((k) => k.startsWith("question_"));
+  // Identificar perguntas
+  const questionIndexes = Array.from(
+    new Set(
+      Object.keys(studentAnswers)
+        .filter((k) => k.startsWith("question_") && k.endsWith("_answer"))
+        .map((k) => k.split("_")[1])
+    )
+  );
 
-  // Se não houver perguntas, devolve top 3 por rating (fallback)
-  if (questionKeys.length === 0) {
-    const fallback = tutors
+  if (questionIndexes.length === 0) {
+    // fallback por rating
+    return tutors
       .map((t: any) => ({
         tutorId: String(t.id),
         compatibility: 0,
@@ -59,58 +64,101 @@ export async function getBestTutorMatches(studentAnswers: Record<string, string>
       }))
       .sort((a, b) => (b.rating || 0) - (a.rating || 0))
       .slice(0, 3);
-    return fallback;
   }
 
-  const questionWeight = 100 / questionKeys.length;
+  // ------------------------------
+  // 🔥 1. Ler ranks das perguntas
+  // ------------------------------
+  const ranks = questionIndexes.map((idx) => ({
+    idx,
+    rank: Number(studentAnswers[`question_${idx}_rank`]) || 1,
+  }));
 
+  const N = ranks.length;
+
+  // ------------------------------
+  // 🔥 2. Calcular peso bruto ri
+  // r_i = (N - rank_i + 1)^P
+  // ------------------------------
+  const rawWeights = ranks.map((q) => ({
+    idx: q.idx,
+    raw: Math.pow(N - q.rank + 1, P),
+  }));
+
+  const rawSum = rawWeights.reduce((sum, w) => sum + w.raw, 0);
+
+  // ------------------------------
+  // 🔥 3. Normalizar wi = ri / Σ ri
+  // ------------------------------
+  const normalizedWeights = rawWeights.map((w) => ({
+    idx: w.idx,
+    weight: w.raw / rawSum, // soma = 1
+  }));
+
+  // Criar acesso rápido weight por pergunta
+  const getWeight = (idx: string) =>
+    normalizedWeights.find((w) => w.idx === idx)?.weight || 0;
+
+  // ------------------------------
+  // 🔥 4. Função de cálculo de compatibilidade
+  // ------------------------------
   function calculateCompatibility(tutor: any) {
     let total = 0;
 
-    for (const key of questionKeys) {
-      const sValueRaw = studentAnswers[key];
-      // Alguns registos de tutor podem ter os campos com null / undefined
-      const tValueRaw = (tutor as any)[key];
+    for (const idx of questionIndexes) {
+      const sRaw = studentAnswers[`question_${idx}_answer`];
+      const tRaw = tutor[`question_${idx}_answer`];
 
-      const sValue = normalizeString(sValueRaw);
-      const tValue = normalizeString(tValueRaw);
+      const sValues = Array.isArray(sRaw)
+        ? sRaw.map(normalizeString)
+        : [normalizeString(sRaw)];
 
-      if (sValue !== "" && tValue !== "") {
-        if (tValue === sValue) {
-          total += questionWeight;
-        } else {
-          // Pequena heurística: se tutor.subjects contém sValue (ex: "matematica"), dá meia-pontuação
-          try {
-            const tutorSubjects: string[] = Array.isArray(tutor.subjects) ? tutor.subjects.map(String) : [];
-            const normalizedSubjects = tutorSubjects.map(normalizeString);
-            if (normalizedSubjects.some((sub) => sub.includes(sValue))) {
-              total += questionWeight * 0.5;
-            }
-          } catch (e) {
-            // ignore
-          }
+      const tValues = Array.isArray(tRaw)
+        ? tRaw.map(normalizeString)
+        : [normalizeString(tRaw)];
+
+      const studentItems = sValues.filter((v) => v !== "");
+      const tutorItems = tValues.filter((v) => v !== "");
+
+      if (studentItems.length === 0 || tutorItems.length === 0) continue;
+
+      // ---- Calcular matches ----
+      let matches = 0;
+
+      for (const sVal of studentItems) {
+        if (tutorItems.includes(sVal)) {
+          matches += 1;
+        } else if (tutorItems.some((tVal) => tVal.includes(sVal))) {
+          matches += 0.5;
         }
       }
+
+      const perQuestionCompatibility = matches / studentItems.length;
+
+      // Peso normalizado da pergunta
+      const w = getWeight(idx);
+
+      // Pontuação final ponderada
+      total += perQuestionCompatibility * w * 100;
     }
 
-    // Garantir número inteiro 0..100
-    const rounded = Math.max(0, Math.min(100, Math.round(total)));
-    return rounded;
+    // Garante 0–100
+    return Math.max(0, Math.min(100, Math.round(total)));
   }
 
-  // Calcula resultados
+  // Calcular resultados
   const results: TutorMatch[] = tutors.map((t: any) => ({
     tutorId: String(t.id),
     compatibility: calculateCompatibility(t),
     name: t.name,
     profile_picture: t.profile_picture || null,
     subjects: t.subjects || null,
-    rating: t.rating !== undefined && t.rating !== null ? Number(t.rating) : null,
+    rating:
+      t.rating !== undefined && t.rating !== null ? Number(t.rating) : null,
     bio: t.bio || null,
     email: t.email || null,
   }));
 
-  // Se todas compatibilidades forem 0, devolve top 3 por rating (fallback)
   const anyPositive = results.some((r) => r.compatibility > 0);
 
   if (!anyPositive) {
@@ -119,10 +167,10 @@ export async function getBestTutorMatches(studentAnswers: Record<string, string>
       .slice(0, Math.min(3, results.length));
   }
 
-  // Caso normal: devolve top 3 por compatibilidade (se empate, por rating)
   return results
     .sort((a, b) => {
-      if (b.compatibility !== a.compatibility) return b.compatibility - a.compatibility;
+      if (b.compatibility !== a.compatibility)
+        return b.compatibility - a.compatibility;
       return (b.rating || 0) - (a.rating || 0);
     })
     .slice(0, Math.min(3, results.length));
