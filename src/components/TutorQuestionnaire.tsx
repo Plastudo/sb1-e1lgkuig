@@ -67,24 +67,69 @@ if (!supabaseUrl || supabaseUrl.includes('placeholder')) return
 
 
 // 🔥 Guarda TODAS as respostas dinamicamente
-const tempData = {
-session_id: sessionId,
-...newAnswers
+</div>
+<p className='text-sm text-gray-600 mt-2 text-center'>
+Pergunta {currentQuestion + 1} de {questions.length}
+</p>
+</motion.div>
+
+
+<AnimatePresence mode='wait'>
+<motion.div
+key={currentQuestion}
+initial={{ opacity: 0, x: 50 }}
+animate={{ opacity: 1, x: 0 }}
+exit={{ opacity: 0, x: -50 }}
+transition={{ duration: 0.3 }}
+>
+<Card className='p-8 shadow-xl border-0 bg-white/80 backdrop-blur-sm'>
+<h2 className='text-2xl font-bold text-gray-900 mb-8 text-center'>
+{question.title}
+</h2>
+
+
+<div className='space-y-4'>
+{question.options.map((option, index) => (
+<motion.button
+key={option.value}
+initial={{ opacity: 0, y: 20 }}
+animate={{ opacity: 1, y: 0 }}
+transition={{ delay: index * 0.1 }}
+onClick={() => handleAnswer(question.id, option.value)}
+className='w-full p-4 text-left border-2 border-gray-200 rounded-2xl hover:border-green-400 hover:bg-green-50 transition-all'
+>
+<div className='flex items-center justify-between'>
+<span className='text-lg text-gray-700'>{option.label}</span>
+<ChevronRight className='h-5 w-5 text-gray-400' />
+</div>
+</motion.button>
+))}
+</div>
+
+
+<div className='flex justify-between mt-8'>
+<Button
+variant='outline'
+onClick={goBack}
+disabled={currentQuestion === 0}
+className='flex items-center space-x-2'
+>
+<ChevronLeft className='h-4 w-4' />
+<span>Anterior</span>
+</Button>
+
+
+{answers[`question_${question.id}_answer`] && (
+<div className='flex items-center space-x-2 text-green-600'>
+<Check className='h-4 w-4' />
+<span>Respondido</span>
+</div>
+)}
+</div>
+</Card>
+</motion.div>
+</AnimatePresence>
+</div>
+</div>
+)
 }
-
-
-await supabase
-.from('temp_tutores')
-.upsert(tempData, { onConflict: 'session_id' })
-} catch (error) {
-console.warn('Erro ao guardar dados temporários:', error)
-}
-
-
-if (currentQuestion < questions.length - 1) {
-setCurrentQuestion((prev) => prev + 1)
-} else {
-setShowAuth(true)
-}
-}
-
