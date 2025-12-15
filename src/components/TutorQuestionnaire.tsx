@@ -88,24 +88,3 @@ setShowAuth(true)
 }
 }
 
-
-//-----------------REGISTO FINAL-----------------
-const handleRegistrationComplete = async (userId: string) => {
-try {
-const { data: tempData, error } = await supabase
-.from('temp_tutores')
-.select('*')
-.eq('session_id', sessionId)
-.single()
-
-
-if (error || !tempData) throw error
-
-
-const { data: { user } } = await supabase.auth.getUser()
-
-
-// 🔥 Cria perfil final com TODAS as respostas automaticamente
-const tutorData = {
-user_id: userId,
-name: user?.user_metadata?.name || user?.email?.split('@')[0] || '',
