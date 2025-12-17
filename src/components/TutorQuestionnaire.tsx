@@ -11,29 +11,8 @@ import { BookOpen, GraduationCap, User, Building } from 'lucide-react'
 
 // ----------------- ARRAY DE PERGUNTAS -----------------
 const questions = [
-  {
+  { 
     id: 1,
-    type: 'cards',
-    title: 'Qual é a sua área principal de expertise?',
-    options: [
-      { value: 'matematica', label: 'Matemática e Ciências Exatas', desc: 'Álgebra, cálculo, física, química, etc.', icon: BookOpen },
-      { value: 'linguas', label: 'Línguas e Literatura', desc: 'Português, Inglês, Francês, Espanhol, etc.', icon: BookOpen },
-      { value: 'ciencias', label: 'Ciências Naturais e Biologia', desc: 'Biologia, geologia, ciências naturais', icon: BookOpen },
-      { value: 'humanas', label: 'Ciências Humanas e Sociais', desc: 'História, filosofia, geografia, sociologia', icon: BookOpen }
-    ]
-  },
-  {
-    id: 2,
-    type: 'cards',
-    title: 'Qual é o seu nível de experiência a ensinar?',
-    options: [
-      { value: 'iniciante', label: 'Iniciante', desc: 'Ainda estou a começar a dar explicações', icon: GraduationCap },
-      { value: 'intermedio', label: 'Intermédio', desc: 'Já tenho alguma experiência com alunos', icon: GraduationCap },
-      { value: 'avancado', label: 'Avançado', desc: 'Dou explicações regularmente há vários anos', icon: GraduationCap }
-    ]
-  },
-  {
-    id: 3,
     type: 'cards',
     title: 'Como vais dar explicações?',
     options: [
@@ -41,6 +20,19 @@ const questions = [
       { value: 'grupo', label: 'Centro de estudos / grupo', desc: 'Explicações em grupo ou num centro de estudos', icon: Building }
     ]
   }
+{
+  id: 2,
+  type: 'cards-with-other',
+  title: 'Nível Académico',
+  subtitle: 'Qual é o teu nível académico mais alto concluído?',
+  icon: GraduationCap,
+  options: [
+    { value: 'Licenciatura', label: 'Licenciatura' },
+    { value: 'Mestrado', label: 'Mestrado' },
+    { value: 'Doutoramento', label: 'Doutoramento' },
+    { value: 'Outro', label: 'Outro (especificar)' }
+  ]
+}
 ]
 
 export const TutorQuestionnaire = () => {
@@ -104,55 +96,94 @@ export const TutorQuestionnaire = () => {
   }
 
   //-----------------FUNÇÃO RENDER STEP CONTENT-----------------
-  const renderStepContent = (question) => {
-    switch (question.type) {
-      case 'cards':
-        return (
-          <div className="space-y-6">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">{question.title}</h2>
-              {question.subtitle && <p className="text-gray-600">{question.subtitle}</p>}
-            </div>
+  const renderStepContent = () => {
+  const question = questions[currentStep]
 
-            <div className="grid gap-4">
-              {question.options.map(option => {
-                const Icon = option.icon
-                return (
-                  <button
-                    key={option.value}
-                    onClick={() => handleAnswer(question.id, option.value)}
-                    className={`p-6 rounded-xl border-2 flex items-center space-x-4 transition-all duration-200 ${answers[`question_${question.id}_answer`] === option.value ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
-                  >
-                    {Icon && <Icon className="w-8 h-8" />}
-                    <div>
-                      <div className="font-semibold">{option.label}</div>
-                      {option.desc && <div className="text-sm text-gray-500 mt-1">{option.desc}</div>}
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
+  switch (question.type) {
+    // ----------------- Pergunta 3 -----------------
+    case 'cards':
+      return (
+        <div className="space-y-6">
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">
+              {question.title}
+            </h2>
+            {question.subtitle && (
+              <p className="text-gray-600">{question.subtitle}</p>
+            )}
           </div>
-        )
 
-      case 'text':
-        return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-center">{question.title}</h2>
-            <textarea
-              className="w-full p-4 border rounded-xl"
-              rows={5}
-              value={answers[`question_${question.id}_answer`] || ''}
-              onChange={(e) => handleAnswer(question.id, e.target.value)}
+          <div className="grid gap-4">
+            {question.options.map(option => (
+              <button
+                key={option.value}
+                onClick={() => handleAnswer(question.id, option.value)}
+                className={`p-4 rounded-xl border-2 transition-all text-left ${
+                  answers[`question_${question.id}_answer`] === option.value
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )
+
+    // ----------------- Pergunta 4 -----------------
+    case 'cards-with-other':
+      return (
+        <div className="space-y-6">
+          <div className="text-center mb-8">
+            {question.icon && (
+              <question.icon className="w-12 h-12 text-blue-500 mx-auto mb-4" />
+            )}
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">
+              {question.title}
+            </h2>
+            {question.subtitle && (
+              <p className="text-gray-600">{question.subtitle}</p>
+            )}
+          </div>
+
+          <div className="grid gap-3">
+            {question.options.map(option => (
+              <button
+                key={option.value}
+                onClick={() => handleAnswer(question.id, option.value)}
+                className={`p-4 rounded-lg border-2 transition-all text-left ${
+                  answers[`question_${question.id}_answer`] === option.value
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+
+          {answers[`question_${question.id}_answer`] === 'Outro' && (
+            <input
+              type="text"
+              placeholder="Especifica o teu nível académico"
+              value={answers[`question_${question.id}_other`] || ''}
+              onChange={(e) =>
+                setAnswers(prev => ({
+                  ...prev,
+                  [`question_${question.id}_other`]: e.target.value
+                }))
+              }
+              className="w-full p-4 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none text-lg"
             />
-          </div>
-        )
+          )}
+        </div>
+      )
 
-      default:
-        return null
-    }
+    default:
+      return null
   }
-
+}
   //-----------------RENDER COMPONENTE-----------------
   if (showAuth) {
     return (
