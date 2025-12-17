@@ -19,7 +19,7 @@ const questions = [
       { value: 'individual', label: 'Individual', desc: 'Aulas particulares para um aluno', icon: User },
       { value: 'grupo', label: 'Centro de estudos / grupo', desc: 'Explicações em grupo ou num centro de estudos', icon: Building }
     ]
-  }
+  },
 {
   id: 2,
   type: 'cards-with-other',
