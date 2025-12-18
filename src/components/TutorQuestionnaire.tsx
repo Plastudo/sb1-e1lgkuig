@@ -66,29 +66,19 @@ export const TutorQuestionnaire = () => {
   }
 
   //-----------------FUNÇÃO DE REGISTRO FINAL-----------------
-  const handleRegistrationComplete = async (userId) => {
-    try {
-      const { data: tempData, error } = await supabase.from('temp_tutores').select('*').eq('session_id', sessionId).single()
-      if (error || !tempData) throw error
-
-      const { data: { user } } = await supabase.auth.getUser()
-      const tutorData = {
-        user_id: userId,
-        name: user?.user_metadata?.name || user?.email?.split('@')[0] || '',
-        email: user?.email || '',
-        ...Object.fromEntries(Object.entries(tempData).filter(([key]) => key.startsWith('question_'))),
-        bio: '',
-        subjects: [],
-        profile_picture: ''
-      }
-
-      await supabase.from('tutores').insert(tutorData)
-      await supabase.from('temp_tutores').delete().eq('session_id', sessionId)
-      navigate('/profile')
-    } catch (error) {
-      console.error('Erro ao finalizar registo:', error)
-    }
-  }
+ const tutorData = {
+  user_id: userId,
+  name: user?.user_metadata?.name || user?.email?.split('@')[0] || '',
+  email: user?.email || '',
+  answers: Object.fromEntries(
+    Object.entries(tempData).filter(([key]) =>
+      key.startsWith('question_')
+    )
+  ),
+  bio: '',
+  subjects: [],
+  profile_picture: ''
+}
 
   //-----------------FUNÇÃO DE VOLTAR-----------------
   const goBack = () => {
