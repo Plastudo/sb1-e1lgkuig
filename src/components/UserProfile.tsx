@@ -49,7 +49,7 @@ export const UserProfile = () => {
   const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
 
-  const [tutorProfile, setTutorProfile] = useState<TutorData | null>(null)
+  const [tutorProfile, setTutorProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
   //-----------------CARREGAR PERFIL-----------------
