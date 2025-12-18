@@ -1,23 +1,23 @@
-//-----------------TUTOR QUESTIONNAIRE REFATORADO-----------------
+//-----------------TUTOR QUESTIONNAIRE-----------------
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from './ui/button'
 import { Card } from './ui/card'
 import { supabase } from '../lib/supabase'
-import { ChevronLeft, Check } from 'lucide-react'
+import { ChevronRight, ChevronLeft, Check } from 'lucide-react'
 import { AuthModal } from './AuthModal'
-import { GraduationCap, User, Building } from 'lucide-react'
+import { BookOpen, GraduationCap, User, Building } from 'lucide-react'
 
-// ----------------- ARRAY DE PERGUNTAS -----------------
+//-----------------ARRAY DE PERGUNTAS-----------------
 const questions = [
   { 
     id: 1,
     type: 'cards',
     title: 'Como vais dar explicações?',
     options: [
-      { value: 'individual', label: 'Individual', desc: 'Aulas particulares para um aluno', icon: User },
-      { value: 'grupo', label: 'Centro de estudos / grupo', desc: 'Explicações em grupo ou num centro de estudos', icon: Building }
+      { value: 'individual', label: 'Individual', icon: User },
+      { value: 'grupo', label: 'Centro de estudos / grupo', icon: Building }
     ]
   },
   {
@@ -35,27 +35,27 @@ const questions = [
   }
 ]
 
+//-----------------COMPONENTE PRINCIPAL-----------------
 export const TutorQuestionnaire = () => {
   const [currentStep, setCurrentStep] = useState(0)
-  const [answers, setAnswers] = useState({})
+  const [answers, setAnswers] = useState<{ [key: string]: string }>({})
   const [sessionId] = useState(() => crypto.randomUUID())
   const [showAuth, setShowAuth] = useState(false)
   const navigate = useNavigate()
 
-  //-----------------FUNÇÃO DE RESPOSTA-----------------
-  const handleAnswer = async (questionId, answer) => {
+  //-----------------HANDLE ANSWER-----------------
+  const handleAnswer = async (questionId: number, answer: string) => {
     const newAnswers = { ...answers, [`question_${questionId}_answer`]: answer }
     setAnswers(newAnswers)
 
-    // Salvar dados temporários no Supabase
+    // Salvar dados temporários
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-      if (supabaseUrl && !supabaseUrl.includes('placeholder')) {
-        const tempData = { session_id: sessionId, ...newAnswers }
-        await supabase.from('temp_tutores').upsert(tempData, { onConflict: 'session_id' })
-      }
+      await supabase.from('temp_tutores').upsert(
+        { session_id: sessionId, ...newAnswers },
+        { onConflict: 'session_id' }
+      )
     } catch (error) {
-      console.warn('Erro ao guardar dados temporários:', error)
+      console.warn('Erro ao salvar temporário:', error)
     }
 
     if (currentStep < questions.length - 1) {
@@ -65,55 +65,48 @@ export const TutorQuestionnaire = () => {
     }
   }
 
-  //-----------------FUNÇÃO DE REGISTRO FINAL-----------------
-  const handleRegistrationComplete = async (userId) => {
+  //-----------------HANDLE REGISTRATION COMPLETE-----------------
+  const handleRegistrationComplete = async (userId: string) => {
     try {
-      // Buscar dados temporários
+      // Pega dados temporários
       const { data: tempData, error } = await supabase
         .from('temp_tutores')
         .select('*')
         .eq('session_id', sessionId)
         .single()
+
       if (error || !tempData) throw error
 
-      // Obter dados do utilizador autenticado
+      // Pega info do usuário logado
       const { data: { user } } = await supabase.auth.getUser()
 
-      // Preparar objeto para tabela permanente
+      // Monta dados para a tabela permanente
       const tutorData = {
         user_id: userId,
         name: user?.user_metadata?.name || user?.email?.split('@')[0] || '',
         email: user?.email || '',
-        // Passar apenas as respostas das perguntas
-        ...Object.fromEntries(
-          Object.entries(tempData).filter(([key]) =>
-            key.startsWith('question_')
-          )
-        ),
+        question_1_answer: tempData.question_1_answer || null,
+        question_2_answer: tempData.question_2_answer || null,
         bio: '',
         subjects: [],
         profile_picture: ''
       }
 
-      // Inserir na tabela permanente
       await supabase.from('tutores').insert(tutorData)
-
-      // Apagar dados temporários
       await supabase.from('temp_tutores').delete().eq('session_id', sessionId)
 
-      // Redirecionar para perfil
       navigate('/profile')
     } catch (error) {
-      console.error('Erro ao finalizar registo:', error)
+      console.error('Erro ao completar registo:', error)
     }
   }
 
-  //-----------------FUNÇÃO DE VOLTAR-----------------
+  //-----------------GO BACK-----------------
   const goBack = () => {
     if (currentStep > 0) setCurrentStep(prev => prev - 1)
   }
 
-  //-----------------FUNÇÃO RENDER STEP CONTENT-----------------
+  //-----------------RENDER STEP CONTENT-----------------
   const renderStepContent = () => {
     const question = questions[currentStep]
 
@@ -122,17 +115,17 @@ export const TutorQuestionnaire = () => {
         return (
           <div className="space-y-6">
             <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">{question.title}</h2>
-              {question.subtitle && <p className="text-gray-600">{question.subtitle}</p>}
+              <h2 className="text-2xl font-bold">{question.title}</h2>
             </div>
+
             <div className="grid gap-4">
               {question.options.map(option => (
                 <button
                   key={option.value}
                   onClick={() => handleAnswer(question.id, option.value)}
-                  className={`p-4 rounded-xl border-2 transition-all text-left ${
+                  className={`p-4 rounded-xl border-2 text-left ${
                     answers[`question_${question.id}_answer`] === option.value
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      ? 'border-blue-500 bg-blue-50'
                       : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                   }`}
                 >
@@ -147,18 +140,19 @@ export const TutorQuestionnaire = () => {
         return (
           <div className="space-y-6">
             <div className="text-center mb-8">
-              {question.icon && <question.icon className="w-12 h-12 text-blue-500 mx-auto mb-4" />}
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">{question.title}</h2>
+              {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-blue-500" />}
+              <h2 className="text-2xl font-bold">{question.title}</h2>
               {question.subtitle && <p className="text-gray-600">{question.subtitle}</p>}
             </div>
+
             <div className="grid gap-3">
               {question.options.map(option => (
                 <button
                   key={option.value}
                   onClick={() => handleAnswer(question.id, option.value)}
-                  className={`p-4 rounded-lg border-2 transition-all text-left ${
+                  className={`p-4 rounded-lg border-2 text-left ${
                     answers[`question_${question.id}_answer`] === option.value
-                      ? 'border-blue-500 bg-blue-50 text-blue-700'
+                      ? 'border-blue-500 bg-blue-50'
                       : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                   }`}
                 >
@@ -166,6 +160,7 @@ export const TutorQuestionnaire = () => {
                 </button>
               ))}
             </div>
+
             {answers[`question_${question.id}_answer`] === 'Outro' && (
               <input
                 type="text"
@@ -188,7 +183,7 @@ export const TutorQuestionnaire = () => {
     }
   }
 
-  //-----------------RENDER COMPONENTE-----------------
+  //-----------------RENDER COMPONENT-----------------
   if (showAuth) {
     return (
       <AuthModal
@@ -203,10 +198,11 @@ export const TutorQuestionnaire = () => {
   const progress = ((currentStep + 1) / questions.length) * 100
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8">
+    <div className="min-h-screen py-8 bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50">
       <div className="max-w-4xl mx-auto px-4">
+
         {/* Barra de progresso */}
-        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+        <motion.div className="mb-8">
           <div className="bg-white rounded-full h-3 overflow-hidden shadow-sm">
             <motion.div
               className="h-full bg-gradient-to-r from-yellow-400 to-green-400"
@@ -228,12 +224,13 @@ export const TutorQuestionnaire = () => {
             exit={{ opacity: 0, x: -50 }}
             transition={{ duration: 0.3 }}
           >
-            <Card className="p-8 shadow-xl border-0 bg-white/80 backdrop-blur-sm">
-              {renderStepContent(question)}
+            <Card className="p-8 shadow-xl bg-white/80 backdrop-blur-sm">
+              {renderStepContent()}
+
               <div className="flex justify-between mt-8">
-                <Button variant="outline" onClick={goBack} disabled={currentStep === 0} className="flex items-center space-x-2">
+                <Button variant="outline" onClick={goBack} disabled={currentStep === 0}>
                   <ChevronLeft className="h-4 w-4" />
-                  <span>Anterior</span>
+                  Anterior
                 </Button>
 
                 {answers[`question_${question.id}_answer`] && (
@@ -246,6 +243,7 @@ export const TutorQuestionnaire = () => {
             </Card>
           </motion.div>
         </AnimatePresence>
+
       </div>
     </div>
   )
