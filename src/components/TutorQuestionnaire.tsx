@@ -9,6 +9,24 @@ import { ChevronRight, ChevronLeft, Check } from 'lucide-react'
 import { AuthModal } from './AuthModal'
 import { BookOpen, GraduationCap, User, Building } from 'lucide-react'
 
+//-----------------SUPABASE DEBUG HELPERS-----------------
+const logSupabase = (step: string, payload: any) => {
+  console.group(`[SUPABASE][${step}]`)
+  console.log('Timestamp:', new Date().toISOString())
+  console.log('Payload:', payload)
+  console.groupEnd()
+}
+
+const logSupabaseError = (step: string, error: any) => {
+  console.group(`[SUPABASE ERROR][${step}]`)
+  console.error('Timestamp:', new Date().toISOString())
+  console.error('Error object:', error)
+  console.error('Message:', error?.message)
+  console.error('Details:', error?.details)
+  console.error('Hint:', error?.hint)
+  console.groupEnd()
+}
+
 //-----------------ARRAY DE PERGUNTAS-----------------
 const questions = [
   { 
@@ -45,17 +63,43 @@ export const TutorQuestionnaire = () => {
 
   //-----------------HANDLE ANSWER-----------------
   const handleAnswer = async (questionId: number, answer: string) => {
-    const newAnswers = { ...answers, [`question_${questionId}_answer`]: answer }
+    console.group('[HANDLE ANSWER]')
+    console.log('Session ID:', sessionId)
+    console.log('Question ID:', questionId)
+    console.log('Answer:', answer)
+
+    const newAnswers = {
+      ...answers,
+      [`question_${questionId}_answer`]: answer
+    }
+
+    console.log('New Answers:', newAnswers)
+    console.groupEnd()
+
     setAnswers(newAnswers)
 
-    // Salvar dados temporários
     try {
-      await supabase.from('temp_tutores').upsert(
-        { session_id: sessionId, ...newAnswers },
-        { onConflict: 'session_id' }
-      )
+      logSupabase('UPSERT temp_tutores - START', {
+        session_id: sessionId,
+        ...newAnswers
+      })
+
+      const { data, error } = await supabase
+        .from('temp_tutores')
+        .upsert(
+          { session_id: sessionId, ...newAnswers },
+          { onConflict: 'session_id' }
+        )
+
+      if (error) {
+        logSupabaseError('UPSERT temp_tutores', error)
+        throw error
+      }
+
+      logSupabase('UPSERT temp_tutores - SUCCESS', data)
+
     } catch (error) {
-      console.warn('Erro ao salvar temporário:', error)
+      console.warn('⚠️ Erro ao salvar temporário:', error)
     }
 
     if (currentStep < questions.length - 1) {
@@ -67,20 +111,42 @@ export const TutorQuestionnaire = () => {
 
   //-----------------HANDLE REGISTRATION COMPLETE-----------------
   const handleRegistrationComplete = async (userId: string) => {
+    console.group('[REGISTRATION COMPLETE]')
+    console.log('Session ID:', sessionId)
+    console.log('User ID recebido:', userId)
+    console.groupEnd()
+
     try {
-      // Pega dados temporários
-      const { data: tempData, error } = await supabase
+      // 1️⃣ Buscar dados temporários
+      logSupabase('SELECT temp_tutores - START', { session_id: sessionId })
+
+      const { data: tempData, error: tempError } = await supabase
         .from('temp_tutores')
         .select('*')
         .eq('session_id', sessionId)
         .single()
 
-      if (error || !tempData) throw error
+      if (tempError) {
+        logSupabaseError('SELECT temp_tutores', tempError)
+        throw tempError
+      }
 
-      // Pega info do usuário logado
-      const { data: { user } } = await supabase.auth.getUser()
+      logSupabase('SELECT temp_tutores - RESULT', tempData)
 
-      // Monta dados para a tabela permanente
+      // 2️⃣ Buscar utilizador autenticado
+      logSupabase('AUTH getUser - START', null)
+
+      const { data: authData, error: authError } = await supabase.auth.getUser()
+
+      if (authError) {
+        logSupabaseError('AUTH getUser', authError)
+        throw authError
+      }
+
+      const user = authData?.user
+      logSupabase('AUTH getUser - RESULT', user)
+
+      // 3️⃣ Montar payload final
       const tutorData = {
         user_id: userId,
         name: user?.user_metadata?.name || user?.email?.split('@')[0] || '',
@@ -92,12 +158,39 @@ export const TutorQuestionnaire = () => {
         profile_picture: ''
       }
 
-      await supabase.from('tutores').insert(tutorData)
-      await supabase.from('temp_tutores').delete().eq('session_id', sessionId)
+      logSupabase('INSERT tutores - PAYLOAD', tutorData)
+
+      // 4️⃣ Inserir na tabela definitiva
+      const { data: insertData, error: insertError } = await supabase
+        .from('tutores')
+        .insert(tutorData)
+
+      if (insertError) {
+        logSupabaseError('INSERT tutores', insertError)
+        throw insertError
+      }
+
+      logSupabase('INSERT tutores - SUCCESS', insertData)
+
+      // 5️⃣ Limpar dados temporários
+      logSupabase('DELETE temp_tutores - START', { session_id: sessionId })
+
+      const { error: deleteError } = await supabase
+        .from('temp_tutores')
+        .delete()
+        .eq('session_id', sessionId)
+
+      if (deleteError) {
+        logSupabaseError('DELETE temp_tutores', deleteError)
+        throw deleteError
+      }
+
+      logSupabase('DELETE temp_tutores - SUCCESS', null)
 
       navigate('/profile')
+
     } catch (error) {
-      console.error('Erro ao completar registo:', error)
+      console.error('❌ ERRO AO COMPLETAR REGISTO', error)
     }
   }
 
@@ -140,9 +233,13 @@ export const TutorQuestionnaire = () => {
         return (
           <div className="space-y-6">
             <div className="text-center mb-8">
-              {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-blue-500" />}
+              {question.icon && (
+                <question.icon className="w-12 h-12 mx-auto mb-4 text-blue-500" />
+              )}
               <h2 className="text-2xl font-bold">{question.title}</h2>
-              {question.subtitle && <p className="text-gray-600">{question.subtitle}</p>}
+              {question.subtitle && (
+                <p className="text-gray-600">{question.subtitle}</p>
+              )}
             </div>
 
             <div className="grid gap-3">
