@@ -12,36 +12,39 @@
 //6. handleComplete é chamado, e o utilizador é redirecionado para /profile.
 
 //---------CODE----------------
-import React, { useEffect } from 'react'  // Importa o React e o hook useEffect
-import { useNavigate } from 'react-router-dom'  // Importa o hook para navegar entre páginas
-import { useAuth } from '../contexts/AuthContext'  // Importa o contexto de autenticação
-import { AuthModal } from './AuthModal'  // Importa o componente de formulário AuthModal
+import React, { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
+import { AuthModal } from './AuthModal'
 
-export const Login = () => {  // Define o componente funcional Login
-  const { user } = useAuth()  // Obtém o utilizador atual do contexto de autenticação
-  const navigate = useNavigate()  // Cria uma função para navegar entre páginas
+export const Login: React.FC = () => {
+  const auth = useAuth()
+  const navigate = useNavigate()
 
-  useEffect(() => {  // Executa código quando o componente é montado ou quando "user" muda
-    if (user) {  // Se já houver um utilizador logado
-      navigate('/profile')  // Redireciona automaticamente para a página de perfil
+  useEffect(() => {
+    if (auth?.user) {
+      navigate('/profile')
     }
-  }, [user, navigate])  // Executa sempre que "user" ou "navigate" mudarem
+  }, [auth, navigate])
 
-  const handleComplete = (userId: string) => {  // Função chamada quando o login/registo for concluído
-    navigate('/profile')  // Redireciona para a página de perfil após o utilizador concluir o login/registo
+  // handleComplete seguro
+  const handleComplete = (userId?: string) => {
+    if (userId) {
+      navigate('/profile')
+    } else {
+      console.warn('userId não recebido no handleComplete')
+    }
+  }
+
+  if (!auth) {
+    return <p>Carregando...</p> // Evita renderizar antes do contexto
   }
 
   return (
-    <>
-      {/* Componente AuthModal responsável por autenticação */}
-<AuthModal
-  onComplete={handleComplete}
-  // Título personalizado do modal
-  title="Bem-vindo de volta"
-  // Subtítulo personalizado do modal
-  subtitle="Entre na sua conta para continuar"
-/>
-
-    </>
+    <AuthModal
+      onComplete={handleComplete}
+      title="Bem-vindo de volta"
+      subtitle="Entre na sua conta para continuar"
+    />
   )
 }

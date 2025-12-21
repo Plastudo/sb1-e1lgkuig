@@ -19,239 +19,175 @@
 //-----------------CODE-----------------
 
 //-----------------IMPORTAÇÕES-----------------
-import React, { useEffect, useState } from 'react' // React e hooks para estado e efeitos
-import { useNavigate } from 'react-router-dom' // Para navegação entre páginas
-import { motion } from 'framer-motion' // Biblioteca de animações
-import { Card } from './ui/card' // Componente de cartão estilizado
-import { Button } from './ui/button' // Botão estilizado
-import { useAuth } from '../contexts/AuthContext' // Contexto de autenticação do utilizador
-import { supabase, TutorData } from '../lib/supabase' // Supabase e tipo de dados do tutor
-import { User, Edit, BookOpen, Mail } from 'lucide-react' // Ícones usados na interface
+import React, { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { Card } from './ui/card'
+import { Button } from './ui/button'
+import { useAuth } from '../contexts/AuthContext'
+import { supabase } from '../lib/supabase'
+import { User, Edit, BookOpen, Mail } from 'lucide-react'
+
+//-----------------TIPO LOCAL (IMPORTANTE)-----------------
+// ⚠️ Este tipo NÃO vem do Supabase
+// É apenas TypeScript para tipagem do estado
+type TutorData = {
+  id: string
+  user_id: string
+  name: string
+  email: string
+  question_1_answer?: string
+  question_2_answer?: string
+  question_3_answer?: string
+  bio?: string
+  subjects?: string[]
+  profile_picture?: string
+}
 
 //-----------------COMPONENTE PRINCIPAL-----------------
 export const UserProfile = () => {
-  // Pegando informações do utilizador logado e estado de carregamento da autenticação
   const { user, loading: authLoading } = useAuth()
-  const navigate = useNavigate() // Hook para navegação
-  const [tutorProfile, setTutorProfile] = useState<TutorData | null>(null) // Perfil de tutor (null se não existir)
-  const [loading, setLoading] = useState(true) // Controle de carregamento do perfil
+  const navigate = useNavigate()
 
-  //-----------------EFFECT PARA CARREGAR PERFIL-----------------
+  const [tutorProfile, setTutorProfile] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  //-----------------CARREGAR PERFIL-----------------
   useEffect(() => {
     if (!authLoading && !user) {
-      // Se autenticação terminou e não há utilizador logado
-      navigate('/login') // Redireciona para a página de login
+      navigate('/login')
       return
     }
 
     if (user) {
-      // Se há utilizador logado, busca perfil de tutor
       loadTutorProfile()
     }
   }, [user, authLoading, navigate])
 
-  //-----------------FUNÇÃO PARA CARREGAR PERFIL DE TUTOR-----------------
+  //-----------------FUNÇÃO LOAD-----------------
   const loadTutorProfile = async () => {
-    if (!user) return // Proteção caso não haja utilizador
+    if (!user) return
 
     try {
-      // Requisição ao Supabase para obter perfil do tutor
       const { data, error } = await supabase
-        .from('tutores') // Tabela de tutores
-        .select('*') // Seleciona todos os campos
-        .eq('user_id', user.id) // Filtra pelo id do utilizador logado
-        .single() // Espera apenas um resultado
+        .from('tutores')
+        .select('*')
+        .eq('user_id', user.id)
+        .single()
 
-      // Verifica se ocorreu erro diferente de "sem linhas retornadas"
       if (error && error.code !== 'PGRST116') {
-        throw error // Lança exceção para outros erros
+        throw error
       }
 
-      setTutorProfile(data || null) // Atualiza estado com dados do tutor ou null
+      setTutorProfile(data || null)
     } catch (error) {
-      console.error('Error loading tutor profile:', error) // Log de erro
+      console.error('Erro ao carregar perfil de tutor:', error)
     } finally {
-      setLoading(false) // Finaliza carregamento
+      setLoading(false)
     }
   }
 
-  //-----------------TELA DE CARREGAMENTO-----------------
+  //-----------------LOADING-----------------
   if (authLoading || loading) {
-    // Exibe skeleton screen enquanto autenticação ou perfil estão carregando
     return (
       <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8">
-        <div className="max-w-4xl mx-auto px-4">
-          <div className="animate-pulse"> {/* Animação de carregamento */}
-            <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div> {/* Cabeçalho */}
-            <div className="h-64 bg-gray-200 rounded mb-4"></div> {/* Cartão principal */}
-          </div>
+        <div className="max-w-4xl mx-auto px-4 animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/3 mb-4" />
+          <div className="h-64 bg-gray-200 rounded" />
         </div>
       </div>
     )
   }
 
-  // Se não houver utilizador logado, não mostra nada
-  if (!user) {
-    return null
-  }
+  if (!user) return null
 
-  //-----------------RENDERIZAÇÃO PRINCIPAL-----------------
+  //-----------------RENDER-----------------
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8">
       <div className="max-w-4xl mx-auto px-4">
 
-        {/*-----------------CABEÇALHO-----------------*/}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }} // Animação inicial
-          animate={{ opacity: 1, y: 0 }}  // Animação final
-          className="mb-8"
-        >
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            O meu perfil
-          </h1>
-          <p className="text-gray-600">
-            Gerir a sua conta e informações
-          </p>
+        {/* Cabeçalho */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">O meu perfil</h1>
+          <p className="text-gray-600">Gerir a sua conta e informações</p>
         </motion.div>
 
-        {/*-----------------CARTÃO DE INFORMAÇÕES DO UTILIZADOR-----------------*/}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Card className="p-6 shadow-lg border-0 bg-white/80 backdrop-blur-sm mb-6">
-            <div className="flex items-center space-x-4 mb-4">
-              {/* Avatar do utilizador */}
-              <div className="w-16 h-16 bg-gradient-to-r from-yellow-400 to-green-400 rounded-full flex items-center justify-center">
-                <User className="h-8 w-8 text-white" />
-              </div>
-              <div>
-                {/* Nome ou email do utilizador */}
-                <h2 className="text-xl font-semibold text-gray-900">
-                  {user.user_metadata?.name || user.email?.split('@')[0] || 'Utilizador'}
-                </h2>
-                {/* Email do utilizador */}
-                <div className="flex items-center space-x-2 text-gray-600">
-                  <Mail className="h-4 w-4" />
-                  <span>{user.email}</span>
-                </div>
+        {/* Info do utilizador */}
+        <Card className="p-6 mb-6 bg-white/80 backdrop-blur-sm">
+          <div className="flex items-center space-x-4">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-r from-yellow-400 to-green-400 flex items-center justify-center">
+              <User className="h-8 w-8 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold">
+                {user.user_metadata?.name || user.email?.split('@')[0]}
+              </h2>
+              <div className="flex items-center text-gray-600 space-x-2">
+                <Mail className="h-4 w-4" />
+                <span>{user.email}</span>
               </div>
             </div>
-          </Card>
-        </motion.div>
+          </div>
+        </Card>
 
-        {/*-----------------PERFIL DE TUTOR-----------------*/}
+        {/* Perfil de tutor */}
         {tutorProfile ? (
-          // Caso exista perfil de tutor
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <Card className="p-6 shadow-lg border-0 bg-white/80 backdrop-blur-sm mb-6">
-              {/* Cabeçalho do cartão de tutor */}
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-                  <BookOpen className="h-5 w-5 mr-2 text-green-600" /> {/* Ícone */}
-                  Perfil de Explicador
-                </h3>
-                {/* Botão para editar perfil */}
-                <Button
-                  onClick={() => navigate(`/profile/${tutorProfile.id}`)}
-                  variant="outline"
-                  size="sm"
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Editar perfil
-                </Button>
-              </div>
-
-              {/* Área de expertise e disciplinas */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-600">Área de expertise</p>
-                  <p className="font-medium text-gray-900">
-                    {tutorProfile.question_1_answer === 'matematica' && 'Matemática e Ciências Exatas'}
-                    {tutorProfile.question_1_answer === 'linguas' && 'Línguas e Literatura'}
-                    {tutorProfile.question_1_answer === 'ciencias' && 'Ciências Naturais e Biologia'}
-                    {tutorProfile.question_1_answer === 'humanas' && 'Ciências Humanas e Sociais'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-600">Disciplinas</p>
-                  <p className="font-medium text-gray-900">
-                    {tutorProfile.subjects?.length ? tutorProfile.subjects.join(', ') : 'A definir'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Biografia do tutor */}
-              {tutorProfile.bio && (
-                <div className="mt-4">
-                  <p className="text-sm text-gray-600 mb-1">Biografia</p>
-                  <p className="text-gray-900">{tutorProfile.bio}</p>
-                </div>
-              )}
-            </Card>
-          </motion.div>
-        ) : (
-          // Caso não exista perfil de tutor
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <Card className="p-6 shadow-lg border-0 bg-white/80 backdrop-blur-sm mb-6 text-center">
-              <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" /> {/* Ícone grande */}
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Perfil de explicador não encontrado
+          <Card className="p-6 mb-6 bg-white/80 backdrop-blur-sm">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold flex items-center">
+                <BookOpen className="h-5 w-5 mr-2 text-green-600" />
+                Perfil de Explicador
               </h3>
-              <p className="text-gray-600 mb-4">
-                Quer começar a dar explicações? Complete o questionário para criar o seu perfil.
-              </p>
               <Button
-                onClick={() => navigate('/tutor-questionnaire')}
-                className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
-              >
-                Criar perfil de explicador
-              </Button>
-            </Card>
-          </motion.div>
-        )}
-
-        {/*-----------------ACÇÕES RÁPIDAS-----------------*/}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Card className="p-6 shadow-lg border-0 bg-white/80 backdrop-blur-sm">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              Acções rápidas
-            </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Botão para explorar outros explicadores */}
-              <Button
-                onClick={() => navigate('/marketplace')}
                 variant="outline"
-                className="justify-start"
+                size="sm"
+                onClick={() => navigate(`/profile/${tutorProfile.id}`)}
               >
-                <BookOpen className="h-4 w-4 mr-2" />
-                Explorar explicadores
-              </Button>
-              {/* Botão para encontrar um explicador */}
-              <Button
-                onClick={() => navigate('/student-questionnaire')}
-                variant="outline"
-                className="justify-start"
-              >
-                <User className="h-4 w-4 mr-2" />
-                Encontrar explicador
+                <Edit className="h-4 w-4 mr-2" />
+                Editar
               </Button>
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-600">Área de expertise</p>
+                <p className="font-medium">
+                  {tutorProfile.question_1_answer}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-600">Disciplinas</p>
+                <p className="font-medium">
+                  {tutorProfile.subjects?.join(', ') || 'A definir'}
+                </p>
+              </div>
+            </div>
+
+            {tutorProfile.bio && (
+              <div className="mt-4">
+                <p className="text-sm text-gray-600">Biografia</p>
+                <p>{tutorProfile.bio}</p>
+              </div>
+            )}
           </Card>
-        </motion.div>
+        ) : (
+          <Card className="p-6 text-center bg-white/80 backdrop-blur-sm">
+            <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+            <h3 className="text-lg font-semibold mb-2">
+              Perfil de explicador não encontrado
+            </h3>
+            <p className="text-gray-600 mb-4">
+              Complete o questionário para criar o seu perfil.
+            </p>
+            <Button
+              onClick={() => navigate('/tutor-questionnaire')}
+              className="bg-gradient-to-r from-green-500 to-blue-500"
+            >
+              Criar perfil de explicador
+            </Button>
+          </Card>
+        )}
 
       </div>
     </div>
