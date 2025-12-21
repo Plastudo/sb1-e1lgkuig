@@ -1,4 +1,3 @@
-import React from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { Navbar } from './components/ui/navbar'
@@ -9,6 +8,7 @@ import { Marketplace } from './components/Marketplace'
 import { TutorProfile } from './components/TutorProfile'
 import { Login } from './components/Login'
 import { UserProfile } from './components/UserProfile'
+import { TutorProfilePublic } from './components/TutorProfilePublic'
 
 function App() {
   return (
@@ -21,7 +21,8 @@ function App() {
             <Route path="/tutor-questionnaire" element={<TutorQuestionnaire />} />
             <Route path="/student-questionnaire" element={<StudentQuestionnaire />} />
             <Route path="/marketplace" element={<Marketplace />} />
-            <Route path="/profile/:id" element={<TutorProfile />} />
+            <Route path="/dashboard/tutor-profile" element={<TutorProfile />} />
+            <Route path="/profile/:id" element={<TutorProfilePublic />} />
             <Route path="/profile" element={<UserProfile />} />
             <Route path="/login" element={<Login />} />
           </Routes>
