@@ -54,7 +54,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       const user = result.data?.user
 
       if (user) {
-        const { error: insertError } = await supabase.from('TutorData').insert({
+        const { error: insertError } = await supabase.from('tutores').insert({
           user_id: user.id,
           name,
           email,
