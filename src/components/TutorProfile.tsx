@@ -178,7 +178,7 @@ export const TutorProfile = () => {
 
               {/* FOTO E INFORMAÇÕES BÁSICAS */}
               <div className="text-center lg:text-left">
-                <img src={tutor.profilePicture} alt={tutor.name} className="w-32 h-32 rounded-2xl mx-auto lg:mx-0 mb-4 object-cover ring-4 ring-yellow-100" />
+                <img src={tutor.profile_picture} alt={tutor.name} className="w-32 h-32 rounded-2xl mx-auto lg:mx-0 mb-4 object-cover ring-4 ring-yellow-100" />
                 <div className="space-y-2">
                   {/* CLASSIFICAÇÃO */}
                   <div className="flex items-center justify-center lg:justify-start space-x-2">
