@@ -9,6 +9,43 @@ import { ChevronRight, ChevronLeft, Check } from 'lucide-react'
 import { AuthModal } from './AuthModal'
 import { BookOpen, GraduationCap, User, Building } from 'lucide-react'
 
+// -----------------QUESTION TYPES-----------------
+type CardsQuestion = {
+  id: number
+  type: 'cards'
+  title: string
+  options: {
+    value: string
+    label: string
+    icon?: any
+  }[]
+}
+
+type CardsWithOtherQuestion = {
+  id: number
+  type: 'cards-with-other'
+  title: string
+  subtitle?: string
+  icon?: any
+  options: {
+    value: string
+    label: string
+  }[]
+}
+
+type YesNoWithExtraQuestion = {
+  id: number
+  type: 'yes-no-with-extra'
+  title: string
+  subtitle?: string
+  extraLabel: string
+}
+
+type Question =
+  | CardsQuestion
+  | CardsWithOtherQuestion
+  | YesNoWithExtraQuestion
+
 //-----------------SUPABASE DEBUG HELPERS-----------------
 const logSupabase = (step: string, payload: any) => {
   console.group(`[SUPABASE][${step}]`)
@@ -50,6 +87,13 @@ const questions = [
       { value: 'Doutoramento', label: 'Doutoramento' },
       { value: 'Outro', label: 'Outro (especificar)' }
     ]
+  },
+  {
+    id: 3,
+    type: 'yes-no-with-extra',
+    title: 'Experiência como explicador',
+    subtitle: 'Tens experiência anterior a dar explicações?',
+    extraLabel: 'Quantos anos de experiência tens?'
   }
 ]
 
@@ -274,7 +318,49 @@ export const TutorQuestionnaire = () => {
             )}
           </div>
         )
+        case 'yes-no-with-extra':
+  return (
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold">{question.title}</h2>
+        {question.subtitle && (
+          <p className="text-gray-600">{question.subtitle}</p>
+        )}
+      </div>
 
+      <div className="grid gap-3">
+        {['Sim', 'Não'].map(option => (
+          <button
+            key={option}
+            onClick={() => handleAnswer(question.id, option)}
+            className={`p-4 rounded-lg border-2 text-left ${
+              answers[`question_${question.id}_answer`] === option
+                ? 'border-blue-500 bg-blue-50'
+                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            {option}
+          </button>
+        ))}
+      </div>
+
+      {answers[`question_${question.id}_answer`] === 'Sim' && (
+        <input
+          type="number"
+          min={0}
+          placeholder={question.extraLabel}
+          value={answers[`question_${question.id}_extra`] || ''}
+          onChange={(e) =>
+            setAnswers(prev => ({
+              ...prev,
+              [`question_${question.id}_extra`]: e.target.value
+            }))
+          }
+          className="w-full p-4 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none text-lg"
+        />
+      )}
+    </div>
+  )
       default:
         return null
     }
@@ -330,12 +416,26 @@ export const TutorQuestionnaire = () => {
                   Anterior
                 </Button>
 
-                {answers[`question_${question.id}_answer`] && (
-                  <div className="flex items-center space-x-2 text-green-600">
-                    <Check className="h-4 w-4" />
-                    <span>Respondido</span>
-                  </div>
-                )}
+                <div className="flex justify-between mt-8">
+  <Button variant="outline" onClick={goBack} disabled={currentStep === 0}>
+    <ChevronLeft className="h-4 w-4" />
+    Anterior
+  </Button>
+
+  <Button
+    onClick={() => {
+      if (currentStep < questions.length - 1) {
+        setCurrentStep(prev => prev + 1)
+      } else {
+        setShowAuth(true)
+      }
+    }}
+    disabled={!answers[`question_${question.id}_answer`]} // só permite avançar se responder
+  >
+    Seguinte
+    <ChevronRight className="h-4 w-4" />
+  </Button>
+</div>
               </div>
             </Card>
           </motion.div>
