@@ -9,7 +9,7 @@ import { ChevronRight, ChevronLeft, Check } from 'lucide-react'
 import { AuthModal } from './AuthModal'
 import { BookOpen, GraduationCap, User, Building } from 'lucide-react'
 import { Calendar, Monitor, Home, Target, MapPin } from 'lucide-react'
-
+import { GripVertical } from 'lucide-react'
 
 // -----------------QUESTION TYPES-----------------
 type CardsQuestion = {
@@ -83,11 +83,20 @@ type SingleChoiceCardsQuestion = {
 type ConditionalQuestion = {
   id: number
   type: 'conditional'
-  dependsOn: string
+  dependsOn: number
   conditions: {
     value: string
     question: Question
   }[]
+}
+
+type PriorityListQuestion = {
+  id: number
+  type: 'priority-list'
+  title: string
+  subtitle?: string
+  icon?: any
+  options: { value: string; label: string }[]
 }
 
 type Question =
@@ -98,7 +107,7 @@ type Question =
   | AvailabilityGridQuestion
   | SingleChoiceCardsQuestion
   | ConditionalQuestion
-
+  | PriorityListQuestion
 //-----------------SUPABASE DEBUG HELPERS-----------------
 const logSupabase = (step: string, payload: any) => {
   console.group(`[SUPABASE][${step}]`)
@@ -276,12 +285,12 @@ const questions: Question[] = [
 {
   id: 10,
   type: 'conditional',
-  dependsOn: 'question_7_answer',
+  dependsOn: 9,
   conditions: [
     {
   value: 'presencial',
   question: {
-    id: 10,
+    id: 101,
     type: 'cards',
     title: 'Distrito',
     icon: MapPin,
@@ -294,7 +303,7 @@ const questions: Question[] = [
     {
       value: 'online',
       question: {
-        id: 10,
+        id: 102,
         type: 'cards',
         title: 'Plataforma',
         icon: Monitor,
@@ -312,7 +321,7 @@ const questions: Question[] = [
     {
       value: 'centro-estudo',
       question: {
-        id: 10,
+        id: 103,
         type: 'cards-with-other',
         title: 'Centro de Estudo',
         subtitle: 'Tens preferência por algum centro ou zona?',
@@ -325,7 +334,7 @@ const questions: Question[] = [
 {
   id: 11,
   type: 'conditional',
-  dependsOn: 'question_7_answer',
+  dependsOn: 9,
   conditions: [
     {
       value: 'presencial',
@@ -342,7 +351,7 @@ const questions: Question[] = [
 {
   id: 12,
   type: 'conditional',
-  dependsOn: 'question_7_answer',
+  dependsOn: 9,
   conditions: [
     {
       value: 'presencial',
@@ -355,7 +364,52 @@ const questions: Question[] = [
       }
     }
   ]
-}
+},
+ {
+    id: 15,
+    type: 'cards-multiple',
+    title: 'Abordagem de Ensino',
+    subtitle: 'Que tipo de abordagem usas nas tuas explicações?',
+    icon: Target,
+    options: [
+      { value: 'Explicações práticas', label: 'Explicações práticas' },
+      { value: 'Uso de material visual', label: 'Uso de material visual' },
+      { value: 'Aulas expositivas', label: 'Aulas expositivas' },
+      { value: 'Exercícios guiados', label: 'Exercícios guiados' },
+      { value: 'Aulas interativas', label: 'Aulas interativas' },
+      { value: 'Preparação intensiva para exames', label: 'Preparação intensiva para exames' }
+    ]
+  },
+  {
+    id: 16,
+    type: 'cards-multiple',
+    title: 'Hobbies',
+    subtitle: 'Quais são as tuas áreas de interesse/hobbies?',
+    icon: Gamepad,
+    options: [
+      { value: 'Jogos', label: 'Jogos' },
+      { value: 'Desporto', label: 'Desporto' },
+      { value: 'Música', label: 'Música' },
+      { value: 'Leitura', label: 'Leitura' },
+      { value: 'Cinema', label: 'Cinema' },
+      { value: 'Outros', label: 'Outros' }
+    ]
+  },
+  {
+    id: 17,
+    type: 'priority-list',
+    title: 'Prioridades',
+    subtitle: 'Ordena os seguintes fatores por importância para ti:',
+    icon: Target,
+    options: [
+      { value: 'Qualidade do material', label: 'Qualidade do material' },
+      { value: 'Experiência do explicador', label: 'Experiência do explicador' },
+      { value: 'Flexibilidade de horário', label: 'Flexibilidade de horário' },
+      { value: 'Preço', label: 'Preço' },
+      { value: 'Método de ensino', label: 'Método de ensino' }
+    ]
+  }
+
 
 ]
 
@@ -430,21 +484,18 @@ export const TutorQuestionnaire = () => {
     if (currentStep > 0) setCurrentStep(prev => prev - 1)
   }
 //-----------------ReNDER QUESTION CONTENT-----------------
-  const renderQuestionContent = (question: Question): React.ReactNode => {
+ const renderQuestionContent = (question: Question): React.ReactNode => {
   if (question.type === 'conditional') {
-    // encontra a condição que corresponde à resposta anterior
     const parentAnswerKey = `question_${question.dependsOn}_answer`
     const parentAnswer = answers[parentAnswerKey]
 
     const condition = question.conditions.find(c => c.value === parentAnswer)
     if (!condition) return null
 
-    // chama recursivamente para renderizar a pergunta dentro da condicional
     return renderQuestionContent(condition.question)
   }
 
-  // se não for condicional, retorna o conteúdo normal
-  return renderStepContent(condition.question)
+  return renderStepContent(question)
 }
   //-----------------RENDER STEP CONTENT-----------------
  const renderStepContent = (question: Question) => {
@@ -686,6 +737,62 @@ export const TutorQuestionnaire = () => {
     </div>
   )
 
+  case 'priority-list':
+  const prioridades: string[] =
+    answers[`question_${question.id}_answer`] && Array.isArray(answers[`question_${question.id}_answer`])
+      ? answers[`question_${question.id}_answer`]
+      : question.options.map(opt => opt.value) // valor inicial
+
+  const handlePriorityDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    e.dataTransfer.setData('text/plain', index.toString())
+  }
+
+  const handlePriorityDrop = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    const draggedIndex = Number(e.dataTransfer.getData('text/plain'))
+    const newPrioridades = [...prioridades]
+    const [movedItem] = newPrioridades.splice(draggedIndex, 1)
+    newPrioridades.splice(index, 0, movedItem)
+    handleAnswer(question.id, newPrioridades)
+  }
+
+  const handlePriorityDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center mb-8">
+        {question.icon && <question.icon className="w-12 h-12 text-emerald-500 mx-auto mb-4" />}
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">{question.title}</h2>
+        {question.subtitle && <p className="text-gray-600">{question.subtitle}</p>}
+      </div>
+
+      <div className="space-y-2">
+        {prioridades.map((item, index) => (
+          <div
+            key={item}
+            draggable
+            onDragStart={e => handlePriorityDragStart(e, index)}
+            onDrop={e => handlePriorityDrop(e, index)}
+            onDragOver={handlePriorityDragOver}
+            className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg cursor-move hover:bg-gray-100 transition-colors"
+          >
+            <GripVertical className="w-5 h-5 text-gray-400" />
+            <span className="w-8 h-8 bg-emerald-600 text-white rounded-full flex items-center justify-center font-semibold text-sm">
+              {index + 1}
+            </span>
+            <span className="font-medium text-gray-700">{item}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+        <p className="text-sm text-blue-700">
+          💡 Arrasta os itens para reordenar por prioridade (1 = mais importante)
+        </p>
+      </div>
+    </div>
+  )
     default:
       return null
   }
