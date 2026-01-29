@@ -487,7 +487,8 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
     const parentAnswerKey = `question_${cq.dependsOn}_answer`
     const parentAnswer = answers[parentAnswerKey]
 
-    const condition = cq.conditions.find(c => c.value === parentAnswer) || cq.conditions[0]
+    const condition =
+  cq.conditions.find(c => c.value === parentAnswer) || cq.conditions[0]
 
     // Preenche dinamicamente opções de Município/Freguesia
   if ('options' in condition.question) {
@@ -859,16 +860,23 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
                   disabled={(() => {
                     // CORREÇÃO: Validação para perguntas condicionais
                     if (question.type === 'conditional') {
-                      const parentAnswerKey = `question_${question.dependsOn}_answer`
-                      const parentAnswer = answers[parentAnswerKey]
-                      const condition = question.conditions.find(c => c.value === parentAnswer)
-                      
-                      if (!condition) return true // Se não houver condição aplicável, desabilita
-                      
-                      // Verifica se a sub-pergunta tem resposta
-                      const subAnswer = answers[`question_${condition.question.id}_answer`]
-                      return subAnswer === undefined || (Array.isArray(subAnswer) && subAnswer.length === 0)
-                    }
+  const parentAnswerKey = `question_${question.dependsOn}_answer`
+  const parentAnswer = answers[parentAnswerKey]
+
+  if (!parentAnswer) return true
+
+  const condition =
+    question.conditions.find(c => c.value === parentAnswer) ||
+    question.conditions[0]
+
+  const subAnswer = answers[`question_${condition.question.id}_answer`]
+
+  return (
+    subAnswer === undefined ||
+    (Array.isArray(subAnswer) && subAnswer.length === 0)
+  )
+}
+
                     
                     // Para perguntas normais, validação original
                     return currentAnswer === undefined || (Array.isArray(currentAnswer) && currentAnswer.length === 0)
