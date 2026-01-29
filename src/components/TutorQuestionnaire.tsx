@@ -7,7 +7,7 @@ import { Card } from './ui/card'
 import { supabase } from '../lib/supabase'
 import { ChevronRight, ChevronLeft, Check } from 'lucide-react'
 import { AuthModal } from './AuthModal'
-import { BookOpen, GraduationCap, User, Building } from 'lucide-react'
+import { BookOpen, GraduationCap, User, Building, Gamepad } from 'lucide-react'
 import { Calendar, Monitor, Home, Target, MapPin } from 'lucide-react'
 import { GripVertical } from 'lucide-react'
 
@@ -147,6 +147,22 @@ const distritos: string[] = [
   'Viseu'
 ]
 
+//-----------------MAPA DE DISTRITOS PARA MUNICÍPIOS E FREGUESIAS-----------------
+const distritosMap: Record<
+  string,
+  { municipio: string; freguesias: string[] }[]
+> = {
+  Lisboa: [
+    { municipio: 'Lisboa', freguesias: ['Santa Maria Maior', 'Santo António', 'Ajuda'] },
+    { municipio: 'Sintra', freguesias: ['Almoçageme', 'Queluz', 'Cacém'] },
+    { municipio: 'Cascais', freguesias: ['Cascais', 'Estoril', 'Carcavelos'] },
+  ],
+  Porto: [
+    { municipio: 'Porto', freguesias: ['Cedofeita', 'Bonfim', 'Lordelo do Ouro'] },
+    { municipio: 'Matosinhos', freguesias: ['Matosinhos', 'Leça da Palmeira'] },
+  ],
+  // Adiciona os outros distritos aqui
+}
 
 //-----------------ARRAY DE PERGUNTAS-----------------
 const questions: Question[] = [
@@ -196,176 +212,160 @@ const questions: Question[] = [
     ]
   },
   {
-  id: 5,
-  type: 'cards-multiple',
-  title: 'Disciplinas',
-  subtitle: 'Que disciplinas podes ensinar? (Podes escolher várias)',
-  icon: BookOpen,
-  options: [
-    { value: 'Português', label: 'Português' },
-    { value: 'Matemática', label: 'Matemática' },
-    { value: 'Física', label: 'Física' },
-    { value: 'Química', label: 'Química' },
-    { value: 'Biologia', label: 'Biologia' },
-    { value: 'História', label: 'História' },
-    { value: 'Geografia', label: 'Geografia' },
-    { value: 'Inglês', label: 'Inglês' },
-    { value: 'Francês', label: 'Francês' },
-    { value: 'Espanhol', label: 'Espanhol' },
-    { value: 'Economia', label: 'Economia' },
-    { value: 'Informática', label: 'Informática' },
-    { value: 'Outras', label: 'Outras' }
-  ]
-},
-{
-  id: 6,
-  type: 'cards',
-  title: 'Quantas horas por semana tens disponibilidade para dar explicações?',
-  options: [
-    { value: '1-5', label: '1 a 5 horas' },
-    { value: '6-10', label: '6 a 10 horas' },
-    { value: '11-20', label: '11 a 20 horas' },
-    { value: '21-30', label: '21 a 30 horas' },
-    { value: '30+', label: 'Mais de 30 horas' }
-  ]
-},
-{
-  id: 7,
-  type: 'cards',
-  title: 'Qual é o valor que pretendes cobrar por hora?',
-  subtitle: 'Valor indicativo (podes alterar mais tarde)',
-  options: [
-    { value: '5-10', label: '5€ – 10€ / hora' },
-    { value: '10-15', label: '10€ – 15€ / hora' },
-    { value: '15-20', label: '15€ – 20€ / hora' },
-    { value: '20-30', label: '20€ – 30€ / hora' },
-    { value: '30+', label: 'Mais de 30€ / hora' }
-  ]
-},
-{
-  id: 8,
-  type: 'availability-grid',
-  title: 'Disponibilidade',
-  subtitle: 'Qual o horário disponível para as explicações?',
-  icon: Calendar
-},
-{
-  id: 9,
-  type: 'single-choice-cards',
-  title: 'Tipo de Explicação',
-  subtitle: 'As explicações serão presenciais ou online?',
-  icon: Monitor,
-  options: [
-    {
-      value: 'presencial',
-      label: 'Presencial',
-      description: 'Na tua casa ou local combinado',
-      icon: Home
-    },
-    {
-      value: 'centro-estudo',
-      label: 'Centro de Estudo',
-      description: 'Numa instalação dedicada ao estudo',
-      icon: Building
-    },
-    {
-      value: 'online',
-      label: 'Online',
-      description: 'Sessões virtuais por videochamada',
-      icon: Monitor
-    },
-    {
-      value: 'indiferente',
-      label: 'Indiferente',
-      description: 'Qualquer formato serve',
-      icon: Target
-    }
-  ]
-},
+    id: 5,
+    type: 'cards-multiple',
+    title: 'Disciplinas',
+    subtitle: 'Que disciplinas podes ensinar? (Podes escolher várias)',
+    icon: BookOpen,
+    options: [
+      { value: 'Português', label: 'Português' },
+      { value: 'Matemática', label: 'Matemática' },
+      { value: 'Física', label: 'Física' },
+      { value: 'Química', label: 'Química' },
+      { value: 'Biologia', label: 'Biologia' },
+      { value: 'História', label: 'História' },
+      { value: 'Geografia', label: 'Geografia' },
+      { value: 'Inglês', label: 'Inglês' },
+      { value: 'Francês', label: 'Francês' },
+      { value: 'Espanhol', label: 'Espanhol' },
+      { value: 'Economia', label: 'Economia' },
+      { value: 'Informática', label: 'Informática' },
+      { value: 'Outras', label: 'Outras' }
+    ]
+  },
+  {
+    id: 6,
+    type: 'cards',
+    title: 'Quantas horas por semana tens disponibilidade para dar explicações?',
+    options: [
+      { value: '1-5', label: '1 a 5 horas' },
+      { value: '6-10', label: '6 a 10 horas' },
+      { value: '11-20', label: '11 a 20 horas' },
+      { value: '21-30', label: '21 a 30 horas' },
+      { value: '30+', label: 'Mais de 30 horas' }
+    ]
+  },
+  {
+    id: 7,
+    type: 'cards',
+    title: 'Qual é o valor que pretendes cobrar por hora?',
+    subtitle: 'Valor indicativo (podes alterar mais tarde)',
+    options: [
+      { value: '5-10', label: '5€ – 10€ / hora' },
+      { value: '10-15', label: '10€ – 15€ / hora' },
+      { value: '15-20', label: '15€ – 20€ / hora' },
+      { value: '20-30', label: '20€ – 30€ / hora' },
+      { value: '30+', label: 'Mais de 30€ / hora' }
+    ]
+  },
+  {
+    id: 8,
+    type: 'availability-grid',
+    title: 'Disponibilidade',
+    subtitle: 'Qual o horário disponível para as explicações?',
+    icon: Calendar
+  },
+  {
+    id: 9,
+    type: 'single-choice-cards',
+    title: 'Tipo de Explicação',
+    subtitle: 'As explicações serão presenciais ou online?',
+    icon: Monitor,
+    options: [
+      { value: 'presencial', label: 'Presencial', description: 'Na tua casa ou local combinado', icon: Home },
+      { value: 'centro-estudo', label: 'Centro de Estudo', description: 'Numa instalação dedicada ao estudo', icon: Building },
+      { value: 'online', label: 'Online', description: 'Sessões virtuais por videochamada', icon: Monitor },
+      { value: 'indiferente', label: 'Indiferente', description: 'Qualquer formato serve', icon: Target }
+    ]
+  },
+  {
+    id: 10,
+    type: 'conditional',
+    dependsOn: 9,
+    conditions: [
+      {
+        value: 'presencial',
+        question: {
+          id: 10,
+          type: 'cards',
+          title: 'Distrito',
+          icon: MapPin,
+          options: distritos.map(d => ({ value: d, label: d }))
+        }
+      },
+      {
+        value: 'online',
+        question: {
+          id: 102,
+          type: 'cards',
+          title: 'Plataforma',
+          icon: Monitor,
+          options: [
+            'Zoom', 'Google Meet', 'Microsoft Teams', 'Skype', 'Discord', 'Sem preferência', 'Outra'
+          ].map(p => ({ value: p, label: p }))
+        }
+      },
+      {
+        value: 'centro-estudo',
+        question: {
+          id: 103,
+          type: 'cards-with-other',
+          title: 'Centro de Estudo',
+          subtitle: 'Tens preferência por algum centro ou zona?',
+          icon: Building,
+          options: [{ value: 'Outro', label: 'Outro (especificar)' }]
+        }
+      }
+    ]
+  },
+  
+  // Distrito (quando "presencial")
 {
   id: 10,
-  type: 'conditional',
-  dependsOn: 9,
-  conditions: [
-    {
-  value: 'presencial',
-  question: {
-    id: 101,
-    type: 'cards',
-    title: 'Distrito',
-    icon: MapPin,
-    options: distritos.map((d: string) => ({
-      value: d,
-      label: d
-    }))
-  }
+  type: 'cards',
+  title: 'Distrito',
+  icon: MapPin,
+  options: distritos.map(d => ({ value: d, label: d }))
 },
-    {
-      value: 'online',
-      question: {
-        id: 102,
-        type: 'cards',
-        title: 'Plataforma',
-        icon: Monitor,
-        options: [
-          'Zoom',
-          'Google Meet',
-          'Microsoft Teams',
-          'Skype',
-          'Discord',
-          'Sem preferência',
-          'Outra'
-        ].map(p => ({ value: p, label: p }))
-      }
-    },
-    {
-      value: 'centro-estudo',
-      question: {
-        id: 103,
-        type: 'cards-with-other',
-        title: 'Centro de Estudo',
-        subtitle: 'Tens preferência por algum centro ou zona?',
-        icon: Building,
-        options: [{ value: 'Outro', label: 'Outro (especificar)' }]
-      }
-    }
-  ]
-},
+
+// Município (dependente do Distrito)
 {
   id: 11,
   type: 'conditional',
-  dependsOn: 9,
+  dependsOn: 10, // agora depende do Distrito correto
   conditions: [
     {
-      value: 'presencial',
+      value: '', // genérico
       question: {
         id: 11,
         type: 'cards',
         title: 'Município',
         icon: MapPin,
-        options: [] // preenchido dinamicamente pelo distrito escolhido
+        options: [] // será preenchido dinamicamente
       }
     }
   ]
 },
+
+// Freguesia (dependente do Município)
 {
   id: 12,
   type: 'conditional',
-  dependsOn: 9,
+  dependsOn: 11, // agora depende do Município correto
   conditions: [
     {
-      value: 'presencial',
+      value: '', // genérico
       question: {
-        id: 102,
+        id: 12,
         type: 'cards',
         title: 'Freguesia',
         icon: MapPin,
-        options: [] // preenchido dinamicamente pelo município
+        options: [] // será preenchido dinamicamente
       }
     }
   ]
 },
- {
+  {
     id: 15,
     type: 'cards-multiple',
     title: 'Abordagem de Ensino',
@@ -409,10 +409,7 @@ const questions: Question[] = [
       { value: 'Método de ensino', label: 'Método de ensino' }
     ]
   }
-
-
 ]
-
 //-----------------COMPONENTE PRINCIPAL-----------------
 export const TutorQuestionnaire = () => {
   const [currentStep, setCurrentStep] = useState(0)
@@ -483,14 +480,36 @@ export const TutorQuestionnaire = () => {
   const goBack = () => {
     if (currentStep > 0) setCurrentStep(prev => prev - 1)
   }
-//-----------------ReNDER QUESTION CONTENT-----------------
- const renderQuestionContent = (question: Question): React.ReactNode => {
+//-----------------ReNDER QUESTION CONTENT (COM MUNICÍPIO/FREGUESIA DINÂMICO)-----------------
+const renderQuestionContent = (question: Question): React.ReactNode => {
   if (question.type === 'conditional') {
-    const parentAnswerKey = `question_${question.dependsOn}_answer`
+    const cq = question as ConditionalQuestion
+    const parentAnswerKey = `question_${cq.dependsOn}_answer`
     const parentAnswer = answers[parentAnswerKey]
 
-    const condition = question.conditions.find(c => c.value === parentAnswer)
-    if (!condition) return null
+    const condition = cq.conditions.find(c => c.value === parentAnswer) || cq.conditions[0]
+
+    // Preenche dinamicamente opções de Município/Freguesia
+  if ('options' in condition.question) {
+  if (condition.question.id === 11) {
+    const distritoSelecionado = answers['question_10_answer']
+    condition.question.options =
+      distritosMap[distritoSelecionado]?.map(m => ({
+        value: m.municipio,
+        label: m.municipio
+      })) || []
+  }
+
+  if (condition.question.id === 12) {
+    const municipioSelecionado = answers['question_11_answer']
+    const distritoSelecionado = answers['question_10_answer']
+    const municipioObj = distritosMap[distritoSelecionado]?.find(
+      m => m.municipio === municipioSelecionado
+    )
+    condition.question.options =
+      municipioObj?.freguesias.map(f => ({ value: f, label: f })) || []
+  }
+}
 
     return renderQuestionContent(condition.question)
   }
@@ -649,8 +668,6 @@ export const TutorQuestionnaire = () => {
       )
 
     case 'availability-grid':
-      const availabilitySelected = Object.values(answers[`question_${question.id}_answer`] || {}).some(v => v)
-
       return (
         <div className="space-y-6">
           <div className="text-center mb-8">
@@ -684,22 +701,6 @@ export const TutorQuestionnaire = () => {
                 </div>
               </div>
             ))}
-          </div>
-
-          <div className="flex justify-end mt-8">
-            <Button
-              onClick={() => {
-                if (currentStep < questions.length - 1) {
-                  setCurrentStep(prev => prev + 1)
-                } else {
-                  setShowAuth(true)
-                }
-              }}
-              disabled={!availabilitySelected} // botão habilitado se houver seleção
-            >
-              Seguinte
-              <ChevronRight className="h-4 w-4" />
-            </Button>
           </div>
         </div>
       )
@@ -855,10 +856,23 @@ export const TutorQuestionnaire = () => {
                       setShowAuth(true)
                     }
                   }}
-                  disabled={
-                    currentAnswer === undefined ||
-                    (Array.isArray(currentAnswer) && currentAnswer.length === 0)
-                  }
+                  disabled={(() => {
+                    // CORREÇÃO: Validação para perguntas condicionais
+                    if (question.type === 'conditional') {
+                      const parentAnswerKey = `question_${question.dependsOn}_answer`
+                      const parentAnswer = answers[parentAnswerKey]
+                      const condition = question.conditions.find(c => c.value === parentAnswer)
+                      
+                      if (!condition) return true // Se não houver condição aplicável, desabilita
+                      
+                      // Verifica se a sub-pergunta tem resposta
+                      const subAnswer = answers[`question_${condition.question.id}_answer`]
+                      return subAnswer === undefined || (Array.isArray(subAnswer) && subAnswer.length === 0)
+                    }
+                    
+                    // Para perguntas normais, validação original
+                    return currentAnswer === undefined || (Array.isArray(currentAnswer) && currentAnswer.length === 0)
+                  })()}
                 >
                   Seguinte
                   <ChevronRight className="h-4 w-4" />
