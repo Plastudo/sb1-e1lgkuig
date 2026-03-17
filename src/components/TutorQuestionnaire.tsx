@@ -7,16 +7,16 @@ import { Card } from './ui/card'
 import { supabase } from '../lib/supabase'
 import { ChevronRight, ChevronLeft, Check } from 'lucide-react'
 import { AuthModal } from './AuthModal'
-import { BookOpen, GraduationCap, User, Building, Gamepad } from 'lucide-react'
+import { BookOpen, GraduationCap, User, Building, Gamepad, Info } from 'lucide-react'
 import { Calendar, Monitor, Home, Target, MapPin } from 'lucide-react'
 import { GripVertical } from 'lucide-react'
-
-// -----------------QUESTION TYPES-----------------
+import { getDistritos, getMunicipiosByDistrito, getFreguesiasByMunicipio } from '../data/locationMap'
 type CardsQuestion = {
   id: number
   type: 'cards'
   title: string
   subtitle?: string
+  tooltip?: string
   icon?: any
   options: {
     value: string
@@ -25,12 +25,12 @@ type CardsQuestion = {
   }[]
 }
 
-
 type CardsWithOtherQuestion = {
   id: number
   type: 'cards-with-other'
   title: string
   subtitle?: string
+  tooltip?: string
   icon?: any
   options: {
     value: string
@@ -43,6 +43,7 @@ type YesNoWithExtraQuestion = {
   type: 'yes-no-with-extra'
   title: string
   subtitle?: string
+  tooltip?: string
   extraLabel: string
 }
 
@@ -51,6 +52,7 @@ type CardsMultipleQuestion = {
   type: 'cards-multiple'
   title: string
   subtitle?: string
+  tooltip?: string
   icon?: any
   options: {
     value: string
@@ -63,6 +65,7 @@ type AvailabilityGridQuestion = {
   type: 'availability-grid'
   title: string
   subtitle?: string
+  tooltip?: string
   icon?: any
 }
 
@@ -71,6 +74,7 @@ type SingleChoiceCardsQuestion = {
   type: 'single-choice-cards'
   title: string
   subtitle?: string
+  tooltip?: string
   icon?: any
   options: {
     value: string
@@ -95,6 +99,7 @@ type PriorityListQuestion = {
   type: 'priority-list'
   title: string
   subtitle?: string
+  tooltip?: string
   icon?: any
   options: { value: string; label: string }[]
 }
@@ -124,44 +129,6 @@ const logSupabaseError = (step: string, error: any) => {
   console.error('Details:', error?.details)
   console.error('Hint:', error?.hint)
   console.groupEnd()
-}
-
-const distritos: string[] = [
-  'Aveiro',
-  'Beja',
-  'Braga',
-  'Bragança',
-  'Castelo Branco',
-  'Coimbra',
-  'Évora',
-  'Faro',
-  'Guarda',
-  'Leiria',
-  'Lisboa',
-  'Portalegre',
-  'Porto',
-  'Santarém',
-  'Setúbal',
-  'Viana do Castelo',
-  'Vila Real',
-  'Viseu'
-]
-
-//-----------------MAPA DE DISTRITOS PARA MUNICÍPIOS E FREGUESIAS-----------------
-const distritosMap: Record<
-  string,
-  { municipio: string; freguesias: string[] }[]
-> = {
-  Lisboa: [
-    { municipio: 'Lisboa', freguesias: ['Santa Maria Maior', 'Santo António', 'Ajuda'] },
-    { municipio: 'Sintra', freguesias: ['Almoçageme', 'Queluz', 'Cacém'] },
-    { municipio: 'Cascais', freguesias: ['Cascais', 'Estoril', 'Carcavelos'] },
-  ],
-  Porto: [
-    { municipio: 'Porto', freguesias: ['Cedofeita', 'Bonfim', 'Lordelo do Ouro'] },
-    { municipio: 'Matosinhos', freguesias: ['Matosinhos', 'Leça da Palmeira'] },
-  ],
-  // Adiciona os outros distritos aqui
 }
 
 //-----------------ARRAY DE PERGUNTAS-----------------
@@ -237,6 +204,7 @@ const questions: Question[] = [
     id: 6,
     type: 'cards',
     title: 'Quantas horas por semana tens disponibilidade para dar explicações?',
+    tooltip: "caso queiras dar a várias disciplinas e alunos diz a soma das horas totais semanais",
     options: [
       { value: '1-5', label: '1 a 5 horas' },
       { value: '6-10', label: '6 a 10 horas' },
@@ -290,7 +258,7 @@ const questions: Question[] = [
           type: 'cards',
           title: 'Distrito',
           icon: MapPin,
-          options: distritos.map(d => ({ value: d, label: d }))
+          options: getDistritos().map(d => ({ value: d, label: d }))
         }
       },
       {
@@ -325,7 +293,7 @@ const questions: Question[] = [
   type: 'cards',
   title: 'Distrito',
   icon: MapPin,
-  options: distritos.map(d => ({ value: d, label: d }))
+  options: getDistritos().map(d => ({ value: d, label: d }))
 },
 
 // Município (dependente do Distrito)
@@ -397,16 +365,17 @@ const questions: Question[] = [
   },
   {
     id: 17,
-    type: 'priority-list',
-    title: 'Prioridades',
-    subtitle: 'Ordena os seguintes fatores por importância para ti:',
+    type: 'cards-multiple',
+    title: 'Necessidades Especiais / Perfil do Aluno',
+    subtitle: 'A que tipo de aluno estás confortável a dar aulas? (Podes escolher várias)',
     icon: Target,
     options: [
-      { value: 'Qualidade do material', label: 'Qualidade do material' },
-      { value: 'Experiência do explicador', label: 'Experiência do explicador' },
-      { value: 'Flexibilidade de horário', label: 'Flexibilidade de horário' },
-      { value: 'Preço', label: 'Preço' },
-      { value: 'Método de ensino', label: 'Método de ensino' }
+      { value: 'Excelente aluno', label: 'Excelente aluno' },
+      { value: 'Aluno mediano', label: 'Aluno mediano' },
+      { value: 'Dificuldades de aprendizagem', label: 'Dificuldades de aprendizagem' },
+      { value: 'TDAH (Défice de atenção)', label: 'TDAH (Défice de atenção)' },
+      { value: 'Autismo / Asperger', label: 'Autismo / Asperger' },
+      { value: 'Outros', label: 'Outros' }
     ]
   }
 ]
@@ -430,7 +399,11 @@ export const TutorQuestionnaire = () => {
       logSupabase('UPSERT temp_tutores - START', { session_id: sessionId, ...newAnswers })
       const { data, error } = await supabase
         .from('temp_tutores')
-        .upsert({ session_id: sessionId, ...newAnswers }, { onConflict: 'session_id' })
+        .upsert({ 
+          session_id: sessionId, 
+          question_1_answer: newAnswers['question_1_answer'] || '',
+          raw_answers: newAnswers 
+        }, { onConflict: 'session_id' })
       if (error) throw error
       logSupabase('UPSERT temp_tutores - SUCCESS', data)
     } catch (error) {
@@ -452,14 +425,19 @@ export const TutorQuestionnaire = () => {
       if (authError) throw authError
       const user = authData?.user
 
+      const rawAnswers = tempData?.raw_answers || {};
+      
       const tutorData = {
         user_id: userId,
         name: user?.user_metadata?.name || user?.email?.split('@')[0] || '',
         email: user?.email || '',
-        question_1_answer: tempData?.question_1_answer || null,
-        question_2_answer: tempData?.question_2_answer || null,
+        question_1_answer: rawAnswers['question_1_answer'] || null,
+        raw_answers: rawAnswers,
         bio: '',
-        subjects: [],
+        subjects: rawAnswers['question_5_answer'] || [],
+        hourly_rate: rawAnswers['question_7_answer'] || null,
+        experience: rawAnswers['question_3_answer'] === 'Sim' ? `${rawAnswers['question_3_extra']} anos` : '-',
+        education: rawAnswers['question_2_answer'] || null,
         profile_picture: ''
       }
 
@@ -494,21 +472,13 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
   if ('options' in condition.question) {
   if (condition.question.id === 11) {
     const distritoSelecionado = answers['question_10_answer']
-    condition.question.options =
-      distritosMap[distritoSelecionado]?.map(m => ({
-        value: m.municipio,
-        label: m.municipio
-      })) || []
+    condition.question.options = getMunicipiosByDistrito(distritoSelecionado).map(m => ({ value: m, label: m }))
   }
 
   if (condition.question.id === 12) {
     const municipioSelecionado = answers['question_11_answer']
     const distritoSelecionado = answers['question_10_answer']
-    const municipioObj = distritosMap[distritoSelecionado]?.find(
-      m => m.municipio === municipioSelecionado
-    )
-    condition.question.options =
-      municipioObj?.freguesias.map(f => ({ value: f, label: f })) || []
+    condition.question.options = getFreguesiasByMunicipio(distritoSelecionado, municipioSelecionado).map(f => ({ value: f, label: f }))
   }
 }
 
@@ -523,8 +493,18 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
     case 'cards':
       return (
         <div className="space-y-6">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold">{question.title}</h2>
+          <div className="text-center mb-8 flex flex-col items-center justify-center gap-2 relative">
+            <div className="flex items-center gap-2">
+              <h2 className="text-2xl font-bold">{question.title}</h2>
+              {question.tooltip && (
+                <div className="group relative flex items-center justify-center cursor-help">
+                  <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold ring-2 ring-blue-50">?</div>
+                  <div className="absolute bottom-full mb-3 hidden group-hover:block w-72 p-4 bg-gray-900 text-white text-sm rounded-lg shadow-xl z-[100] transition-opacity duration-200 opacity-0 group-hover:opacity-100 left-1/2 -translate-x-1/2 text-center pointer-events-none break-words whitespace-normal leading-relaxed before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-8 before:border-transparent before:border-t-gray-900 border border-gray-700">
+                    {question.tooltip}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
           <div className="grid gap-4">
             {question.options.map(option => (
@@ -547,10 +527,21 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
     case 'cards-with-other':
       return (
         <div className="space-y-6">
-          <div className="text-center mb-8">
+          <div className="text-center mb-8 relative">
             {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-blue-500" />}
-            <h2 className="text-2xl font-bold">{question.title}</h2>
-            {question.subtitle && <p className="text-gray-600">{question.subtitle}</p>}
+            <h2 className="text-2xl font-bold inline-flex items-center gap-2">
+              {question.title}
+              {question.tooltip && (
+                <div className="group relative inline-block cursor-help">
+                  <Info className="w-5 h-5 text-blue-400 hover:text-blue-600 transition-colors" />
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-64 bg-slate-800 text-white text-sm rounded-lg p-3 shadow-lg z-50">
+                    {question.tooltip}
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-800"></div>
+                  </div>
+                </div>
+              )}
+            </h2>
+            {question.subtitle && <p className="text-gray-600 mt-2">{question.subtitle}</p>}
           </div>
 
           <div className="grid gap-3">
@@ -589,9 +580,20 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
     case 'yes-no-with-extra':
       return (
         <div className="space-y-6">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold">{question.title}</h2>
-            {question.subtitle && <p className="text-gray-600">{question.subtitle}</p>}
+          <div className="text-center mb-8 relative">
+            <h2 className="text-2xl font-bold inline-flex items-center gap-2">
+              {question.title}
+              {question.tooltip && (
+                <div className="group relative inline-block cursor-help">
+                  <Info className="w-5 h-5 text-blue-400 hover:text-blue-600 transition-colors" />
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-64 bg-slate-800 text-white text-sm rounded-lg p-3 shadow-lg z-50">
+                    {question.tooltip}
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-800"></div>
+                  </div>
+                </div>
+              )}
+            </h2>
+            {question.subtitle && <p className="text-gray-600 mt-2">{question.subtitle}</p>}
           </div>
 
           <div className="grid gap-3">
@@ -635,10 +637,20 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
 
       return (
         <div className="space-y-6">
-          <div className="text-center mb-8">
+          <div className="text-center mb-8 relative">
             {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-purple-500" />}
-            <h2 className="text-2xl font-bold">{question.title}</h2>
-            {question.subtitle && <p className="text-gray-600">{question.subtitle}</p>}
+            <h2 className="text-2xl font-bold inline-flex items-center gap-2">
+              {question.title}
+              {question.tooltip && (
+                <div className="group relative flex items-center justify-center cursor-help">
+                  <div className="w-5 h-5 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs font-bold ring-2 ring-purple-50">?</div>
+                  <div className="absolute bottom-full mb-3 hidden group-hover:block w-72 p-4 bg-gray-900 text-white text-sm rounded-lg shadow-xl z-[100] transition-opacity duration-200 opacity-0 group-hover:opacity-100 left-1/2 -translate-x-1/2 text-center pointer-events-none break-words whitespace-normal leading-relaxed before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-8 before:border-transparent before:border-t-gray-900 border border-gray-700">
+                    {question.tooltip}
+                  </div>
+                </div>
+              )}
+            </h2>
+            {question.subtitle && <p className="text-gray-600 mt-2">{question.subtitle}</p>}
           </div>
 
           <div className="grid gap-3">
@@ -671,10 +683,20 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
     case 'availability-grid':
       return (
         <div className="space-y-6">
-          <div className="text-center mb-8">
+          <div className="text-center mb-8 relative">
             {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-green-500" />}
-            <h2 className="text-2xl font-bold">{question.title}</h2>
-            {question.subtitle && <p className="text-gray-600">{question.subtitle}</p>}
+            <h2 className="text-2xl font-bold inline-flex items-center gap-2">
+              {question.title}
+              {question.tooltip && (
+                <div className="group relative flex items-center justify-center cursor-help">
+                  <div className="w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xs font-bold ring-2 ring-green-50">?</div>
+                  <div className="absolute bottom-full mb-3 hidden group-hover:block w-72 p-4 bg-gray-900 text-white text-sm rounded-lg shadow-xl z-[100] transition-opacity duration-200 opacity-0 group-hover:opacity-100 left-1/2 -translate-x-1/2 text-center pointer-events-none break-words whitespace-normal leading-relaxed before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-8 before:border-transparent before:border-t-gray-900 border border-gray-700">
+                    {question.tooltip}
+                  </div>
+                </div>
+              )}
+            </h2>
+            {question.subtitle && <p className="text-gray-600 mt-2">{question.subtitle}</p>}
           </div>
 
           <div className="grid grid-cols-7 gap-2 text-center">
@@ -711,10 +733,20 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
 
   return (
     <div className="space-y-6">
-      <div className="text-center mb-8">
+      <div className="text-center mb-8 relative">
         {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-blue-500" />}
-        <h2 className="text-2xl font-bold">{question.title}</h2>
-        {question.subtitle && <p className="text-gray-600">{question.subtitle}</p>}
+        <h2 className="text-2xl font-bold inline-flex items-center gap-2">
+          {question.title}
+          {question.tooltip && (
+            <div className="group relative flex items-center justify-center cursor-help">
+              <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold ring-2 ring-blue-50">?</div>
+              <div className="absolute bottom-full mb-3 hidden group-hover:block w-72 p-4 bg-gray-900 text-white text-sm rounded-lg shadow-xl z-[100] transition-opacity duration-200 opacity-0 group-hover:opacity-100 left-1/2 -translate-x-1/2 text-center pointer-events-none break-words whitespace-normal leading-relaxed before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-8 before:border-transparent before:border-t-gray-900 border border-gray-700">
+                {question.tooltip}
+              </div>
+            </div>
+          )}
+        </h2>
+        {question.subtitle && <p className="text-gray-600 mt-2">{question.subtitle}</p>}
       </div>
 
       <div className="grid gap-3">
@@ -763,9 +795,19 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
 
   return (
     <div className="space-y-6">
-      <div className="text-center mb-8">
+      <div className="text-center mb-8 relative">
         {question.icon && <question.icon className="w-12 h-12 text-emerald-500 mx-auto mb-4" />}
-        <h2 className="text-2xl font-bold text-gray-800 mb-2">{question.title}</h2>
+        <h2 className="text-2xl font-bold text-gray-800 mb-2 inline-flex items-center gap-2">
+          {question.title}
+          {question.tooltip && (
+            <div className="group relative flex items-center justify-center cursor-help">
+              <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-xs font-bold ring-2 ring-emerald-50">?</div>
+              <div className="absolute bottom-full mb-3 hidden group-hover:block w-72 p-4 bg-gray-900 text-white text-sm rounded-lg shadow-xl z-[100] transition-opacity duration-200 opacity-0 group-hover:opacity-100 left-1/2 -translate-x-1/2 text-center pointer-events-none break-words whitespace-normal leading-relaxed before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-8 before:border-transparent before:border-t-gray-900 border border-gray-700">
+                {question.tooltip}
+              </div>
+            </div>
+          )}
+        </h2>
         {question.subtitle && <p className="text-gray-600">{question.subtitle}</p>}
       </div>
 

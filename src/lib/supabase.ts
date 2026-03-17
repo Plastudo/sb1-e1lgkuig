@@ -11,6 +11,7 @@ export type TempTutorData = {
   id?: string;
   session_id: string;
   question_1_answer: string;
+  raw_answers?: Record<string, any>;
   created_at?: string;
 };
 
@@ -20,12 +21,19 @@ export type TutorData = {
   name: string;
   email: string;
   question_1_answer: string;
+  raw_answers?: Record<string, any>;
   bio?: string;
   subjects?: string[];
   availability?: string[];
   rating?: number;
   location?: string;
   profile_picture?: string;
+  hourly_rate?: string;
+  experience?: string;
+  education?: string;
+  success_rate?: string;
+  total_students?: number;
+  availability_summary?: string;
   created_at?: string;
   updated_at?: string;
 };
