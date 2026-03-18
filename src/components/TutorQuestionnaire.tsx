@@ -287,15 +287,6 @@ const questions: Question[] = [
     ]
   },
   
-  // Distrito (quando "presencial")
-{
-  id: 10,
-  type: 'cards',
-  title: 'Distrito',
-  icon: MapPin,
-  options: getDistritos().map(d => ({ value: d, label: d }))
-},
-
 // Município (dependente do Distrito)
 {
   id: 11,

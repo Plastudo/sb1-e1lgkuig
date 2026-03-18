@@ -84,7 +84,11 @@ export const UserProfile = () => {
         throw error
       }
 
-      setTutorProfile(data || null)
+      if (data) {
+        navigate('/dashboard/tutor-profile')
+      } else {
+        setTutorProfile(null)
+      }
     } catch (error) {
       console.error('Erro ao carregar perfil de tutor:', error)
     } finally {

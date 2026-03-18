@@ -65,8 +65,6 @@ const handleSubmit = async (e: React.FormEvent) => {
         // Em vez de onComplete, alternar para Login
         setIsSignUp(false)
         setError('')
-        // Opcional: mostrar uma mgs de sucesso ou apenas trocar o ecrã.
-        alert('Conta criada com sucesso! Por favor inicie sessão.')
       }
     } else {
       result = await signIn(email, password)

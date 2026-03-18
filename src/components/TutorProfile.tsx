@@ -14,7 +14,7 @@ import {
 
 export const TutorProfile = () => {
   const { id } = useParams<{ id: string }>()
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
 
   const [tutor, setTutor] = useState<TutorData | null>(null)
@@ -27,19 +27,56 @@ export const TutorProfile = () => {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // 🔹 Carregamento Inicial
-  // Efectua o fetch dos dados do tutor mal o componente monte, usando o ID do URL.
+  // Efectua o fetch dos dados do tutor mal o componente monte, usando o ID do URL ou do user logado.
   useEffect(() => {
-    if (!id) {
-      navigate('/marketplace')
-      return
-    }
+    if (authLoading) return
 
     const fetchTutorData = async () => {
       try {
+        let targetId = id
+
+        if (!targetId) {
+          if (!user) {
+            navigate('/marketplace')
+            return
+          }
+          const { data: ownData, error: ownError } = await supabase
+            .from('tutores')
+            .select('id')
+            .eq('user_id', user.id)
+            .single()
+            
+          if (ownData?.id) {
+            targetId = ownData.id
+          } else if (ownError && ownError.code === 'PGRST116') {
+            // O user logado ainda não tem perfil na tabela tutores (legacy users ou bugs)
+            // Cria automaticamente um perfil base para poder aceder ao modo de edição direto
+             const { data: newTutor, error: insertError } = await supabase
+              .from('tutores')
+              .insert({
+                user_id: user.id,
+                name: user.user_metadata?.name || user.email?.split('@')[0] || 'Utilizador',
+                email: user.email || '',
+                raw_answers: {}
+              })
+              .select('id')
+              .single()
+              
+            if (!insertError && newTutor) {
+              targetId = newTutor.id
+            }
+          }
+        }
+
+        if (!targetId) {
+          navigate('/marketplace')
+          return
+        }
+
         const { data, error } = await supabase
           .from('tutores')
           .select('*')
-          .eq('id', id)
+          .eq('id', targetId)
           .single()
 
         if (error) throw error
@@ -61,7 +98,7 @@ export const TutorProfile = () => {
     }
 
     fetchTutorData()
-  }, [id, navigate])
+  }, [id, navigate, user, authLoading])
 
   // Condição para validar se quem está a visualizar o perfil é o próprio dono
   const isOwner = user && tutor && user.id === tutor.user_id
