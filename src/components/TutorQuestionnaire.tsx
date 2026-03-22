@@ -18,11 +18,8 @@ type CardsQuestion = {
   subtitle?: string
   tooltip?: string
   icon?: any
-  options: {
-    value: string
-    label: string
-    icon?: any
-  }[]
+  skipIf?: (answers: Record<string, any>) => boolean
+  options: { value: string; label: string; icon?: any }[]
 }
 
 type CardsWithOtherQuestion = {
@@ -32,10 +29,8 @@ type CardsWithOtherQuestion = {
   subtitle?: string
   tooltip?: string
   icon?: any
-  options: {
-    value: string
-    label: string
-  }[]
+  skipIf?: (answers: Record<string, any>) => boolean
+  options: { value: string; label: string }[]
 }
 
 type YesNoWithExtraQuestion = {
@@ -45,6 +40,7 @@ type YesNoWithExtraQuestion = {
   subtitle?: string
   tooltip?: string
   extraLabel: string
+  skipIf?: (answers: Record<string, any>) => boolean
 }
 
 type CardsMultipleQuestion = {
@@ -54,10 +50,8 @@ type CardsMultipleQuestion = {
   subtitle?: string
   tooltip?: string
   icon?: any
-  options: {
-    value: string
-    label: string
-  }[]
+  skipIf?: (answers: Record<string, any>) => boolean
+  options: { value: string; label: string }[]
 }
 
 type AvailabilityGridQuestion = {
@@ -67,6 +61,7 @@ type AvailabilityGridQuestion = {
   subtitle?: string
   tooltip?: string
   icon?: any
+  skipIf?: (answers: Record<string, any>) => boolean
 }
 
 type SingleChoiceCardsQuestion = {
@@ -76,22 +71,28 @@ type SingleChoiceCardsQuestion = {
   subtitle?: string
   tooltip?: string
   icon?: any
-  options: {
-    value: string
-    label: string
-    description?: string
-    icon?: any
-  }[]
+  skipIf?: (answers: Record<string, any>) => boolean
+  options: { value: string; label: string; description?: string; icon?: any }[]
 }
 
-type ConditionalQuestion = {
+type TextInputQuestion = {
   id: number
-  type: 'conditional'
-  dependsOn: number
-  conditions: {
-    value: string
-    question: Question
-  }[]
+  type: 'text-input'
+  title: string
+  subtitle?: string
+  placeholder?: string
+  icon?: any
+  skipIf?: (answers: Record<string, any>) => boolean
+}
+
+type DynamicCardsQuestion = {
+  id: number
+  type: 'dynamic-cards'
+  title: string
+  subtitle?: string
+  icon?: any
+  skipIf?: (answers: Record<string, any>) => boolean
+  getOptions: (answers: Record<string, any>) => { value: string; label: string }[]
 }
 
 type PriorityListQuestion = {
@@ -101,6 +102,7 @@ type PriorityListQuestion = {
   subtitle?: string
   tooltip?: string
   icon?: any
+  skipIf?: (answers: Record<string, any>) => boolean
   options: { value: string; label: string }[]
 }
 
@@ -111,7 +113,8 @@ type Question =
   | CardsMultipleQuestion
   | AvailabilityGridQuestion
   | SingleChoiceCardsQuestion
-  | ConditionalQuestion
+  | TextInputQuestion
+  | DynamicCardsQuestion
   | PriorityListQuestion
 //-----------------SUPABASE DEBUG HELPERS-----------------
 const logSupabase = (step: string, payload: any) => {
@@ -218,12 +221,13 @@ const questions: Question[] = [
     type: 'cards',
     title: 'Qual é o valor que pretendes cobrar por hora?',
     subtitle: 'Valor indicativo (podes alterar mais tarde)',
+    tooltip: '10€–15€: normal para ensino primário e explicadores sem ou com pouca experiência.\n15€–20€: explicadores até ao ensino básico.\n25€–35€: normal para ensino secundário com pouca ou nenhuma experiência.\n35€–45€: explicadores com experiência no secundário ou superior.\n+45€: muita experiência ou professores do ensino secundário para cima.',
     options: [
-      { value: '5-10', label: '5€ – 10€ / hora' },
       { value: '10-15', label: '10€ – 15€ / hora' },
       { value: '15-20', label: '15€ – 20€ / hora' },
-      { value: '20-30', label: '20€ – 30€ / hora' },
-      { value: '30+', label: 'Mais de 30€ / hora' }
+      { value: '25-35', label: '25€ – 35€ / hora' },
+      { value: '35-45', label: '35€ – 45€ / hora' },
+      { value: '45+', label: 'Mais de 45€ / hora' }
     ]
   },
   {
@@ -246,84 +250,52 @@ const questions: Question[] = [
       { value: 'indiferente', label: 'Indiferente', description: 'Qualquer formato serve', icon: Target }
     ]
   },
+  // Q10: Nome do centro de estudos (só aparece se Q9 = centro-estudo)
   {
     id: 10,
-    type: 'conditional',
-    dependsOn: 9,
-    conditions: [
-      {
-        value: 'presencial',
-        question: {
-          id: 10,
-          type: 'cards',
-          title: 'Distrito',
-          icon: MapPin,
-          options: getDistritos().map(d => ({ value: d, label: d }))
-        }
-      },
-      {
-        value: 'online',
-        question: {
-          id: 102,
-          type: 'cards',
-          title: 'Plataforma',
-          icon: Monitor,
-          options: [
-            'Zoom', 'Google Meet', 'Microsoft Teams', 'Skype', 'Discord', 'Sem preferência', 'Outra'
-          ].map(p => ({ value: p, label: p }))
-        }
-      },
-      {
-        value: 'centro-estudo',
-        question: {
-          id: 103,
-          type: 'cards-with-other',
-          title: 'Centro de Estudo',
-          subtitle: 'Tens preferência por algum centro ou zona?',
-          icon: Building,
-          options: [{ value: 'Outro', label: 'Outro (especificar)' }]
-        }
-      }
-    ]
+    type: 'text-input',
+    title: 'Qual o centro de estudos onde trabalhas?',
+    placeholder: 'Nome do centro de estudos',
+    icon: Building,
+    skipIf: (a) => a['question_9_answer'] !== 'centro-estudo'
   },
-  
-// Município (dependente do Distrito)
-{
-  id: 11,
-  type: 'conditional',
-  dependsOn: 10, // agora depende do Distrito correto
-  conditions: [
-    {
-      value: '', // genérico
-      question: {
-        id: 11,
-        type: 'cards',
-        title: 'Município',
-        icon: MapPin,
-        options: [] // será preenchido dinamicamente
-      }
-    }
-  ]
-},
-
-// Freguesia (dependente do Município)
-{
-  id: 12,
-  type: 'conditional',
-  dependsOn: 11, // agora depende do Município correto
-  conditions: [
-    {
-      value: '', // genérico
-      question: {
-        id: 12,
-        type: 'cards',
-        title: 'Freguesia',
-        icon: MapPin,
-        options: [] // será preenchido dinamicamente
-      }
-    }
-  ]
-},
+  // Q11: Distrito (não aparece se Q9=online)
+  {
+    id: 11,
+    type: 'cards',
+    title: 'Distrito',
+    icon: MapPin,
+    skipIf: (a) => a['question_9_answer'] === 'online',
+    options: getDistritos().map(d => ({ value: d, label: d }))
+  },
+  // Q12: Concelho (não aparece se Q9=online)
+  {
+    id: 12,
+    type: 'dynamic-cards',
+    title: 'Concelho',
+    icon: MapPin,
+    skipIf: (a) => a['question_9_answer'] === 'online',
+    getOptions: (a) => getMunicipiosByDistrito(a['question_11_answer'] || '').map(m => ({ value: m, label: m }))
+  },
+  // Q13: Freguesia (não aparece se Q9=online)
+  {
+    id: 13,
+    type: 'dynamic-cards',
+    title: 'Freguesia',
+    icon: MapPin,
+    skipIf: (a) => a['question_9_answer'] === 'online',
+    getOptions: (a) => getFreguesiasByMunicipio(a['question_11_answer'] || '', a['question_12_answer'] || '').map(f => ({ value: f, label: f }))
+  },
+  // Q14: Plataforma (só aparece se Q9 = online ou indiferente)
+  {
+    id: 14,
+    type: 'cards',
+    title: 'Plataforma',
+    subtitle: 'Qual a plataforma preferida para as sessões online?',
+    icon: Monitor,
+    skipIf: (a) => !['online', 'indiferente'].includes(a['question_9_answer']),
+    options: ['Zoom', 'Google Meet', 'Microsoft Teams', 'Skype', 'Discord', 'Sem preferência', 'Outra'].map(p => ({ value: p, label: p }))
+  },
   {
     id: 15,
     type: 'cards-multiple',
@@ -455,9 +427,28 @@ export const TutorQuestionnaire = () => {
     }
   }
 
+  //-----------------SKIP LOGIC-----------------
+  const shouldSkip = (step: number, currentAnswers: Record<string, any>) => {
+    const q = questions[step]
+    return 'skipIf' in q && typeof (q as any).skipIf === 'function' && (q as any).skipIf(currentAnswers)
+  }
+
+  const getNextStep = (step: number, currentAnswers: Record<string, any>) => {
+    let next = step + 1
+    while (next < questions.length && shouldSkip(next, currentAnswers)) next++
+    return next
+  }
+
+  const getPrevStep = (step: number, currentAnswers: Record<string, any>) => {
+    let prev = step - 1
+    while (prev >= 0 && shouldSkip(prev, currentAnswers)) prev--
+    return prev
+  }
+
   //-----------------GO BACK-----------------
   const goBack = () => {
-    if (currentStep > 0) setCurrentStep(prev => prev - 1)
+    const prev = getPrevStep(currentStep, answers)
+    if (prev >= 0) setCurrentStep(prev)
   }
 //-----------------ReNDER QUESTION CONTENT (COM MUNICÍPIO/FREGUESIA DINÂMICO)-----------------
 const renderQuestionContent = (question: Question): React.ReactNode => {
@@ -500,7 +491,7 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
               {question.tooltip && (
                 <div className="group relative flex items-center justify-center cursor-help">
                   <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold ring-2 ring-blue-50">?</div>
-                  <div className="absolute bottom-full mb-3 hidden group-hover:block w-72 p-4 bg-gray-900 text-white text-sm rounded-lg shadow-xl z-[100] transition-opacity duration-200 opacity-0 group-hover:opacity-100 left-1/2 -translate-x-1/2 text-center pointer-events-none break-words whitespace-normal leading-relaxed before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-8 before:border-transparent before:border-t-gray-900 border border-gray-700">
+                  <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 hidden group-hover:block w-80 p-4 bg-gray-900 text-white text-sm rounded-lg shadow-xl z-[100] transition-opacity duration-200 opacity-0 group-hover:opacity-100 text-left pointer-events-none whitespace-pre-line leading-relaxed before:content-[''] before:absolute before:top-1/2 before:-translate-y-1/2 before:right-full before:border-8 before:border-transparent before:border-r-gray-900 border border-gray-700">
                     {question.tooltip}
                   </div>
                 </div>
@@ -838,6 +829,59 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
       </div>
     </div>
   )
+    case 'text-input': {
+      const tq = question as TextInputQuestion
+      return (
+        <div className="space-y-6">
+          <div className="text-center mb-8">
+            {tq.icon && <tq.icon className="w-12 h-12 mx-auto mb-4 text-green-500" />}
+            <h2 className="text-2xl font-bold">{tq.title}</h2>
+            {tq.subtitle && <p className="text-gray-600 mt-2">{tq.subtitle}</p>}
+          </div>
+          <input
+            type="text"
+            placeholder={tq.placeholder || ''}
+            value={answers[`question_${tq.id}_answer`] || ''}
+            onChange={(e) => handleAnswer(tq.id, e.target.value)}
+            className="w-full border-2 border-gray-200 rounded-xl p-4 text-base focus:outline-none focus:border-green-400"
+          />
+        </div>
+      )
+    }
+
+    case 'dynamic-cards': {
+      const dq = question as DynamicCardsQuestion
+      const opts = dq.getOptions(answers)
+      return (
+        <div className="space-y-6">
+          <div className="text-center mb-8">
+            {dq.icon && <dq.icon className="w-12 h-12 mx-auto mb-4 text-green-500" />}
+            <h2 className="text-2xl font-bold">{dq.title}</h2>
+            {dq.subtitle && <p className="text-gray-600 mt-2">{dq.subtitle}</p>}
+          </div>
+          {opts.length === 0 ? (
+            <p className="text-center text-gray-400">Seleciona primeiro a opção anterior.</p>
+          ) : (
+            <div className="grid gap-3">
+              {opts.map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => handleAnswer(dq.id, opt.value)}
+                  className={`w-full p-4 rounded-xl border-2 text-left font-medium transition-all ${
+                    answers[`question_${dq.id}_answer`] === opt.value
+                      ? 'border-green-500 bg-green-50 text-green-700'
+                      : 'border-gray-200 bg-white hover:border-green-300'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )
+    }
+
     default:
       return null
   }
@@ -894,34 +938,23 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
 
                 <Button
                   onClick={() => {
-                    if (currentStep < questions.length - 1) {
-                      setCurrentStep(prev => prev + 1)
+                    const next = getNextStep(currentStep, answers)
+                    if (next < questions.length) {
+                      setCurrentStep(next)
                     } else {
                       setShowAuth(true)
                     }
                   }}
                   disabled={(() => {
-                    // CORREÇÃO: Validação para perguntas condicionais
-                    if (question.type === 'conditional') {
-  const parentAnswerKey = `question_${question.dependsOn}_answer`
-  const parentAnswer = answers[parentAnswerKey]
-
-  if (!parentAnswer) return true
-
-  const condition =
-    question.conditions.find(c => c.value === parentAnswer) ||
-    question.conditions[0]
-
-  const subAnswer = answers[`question_${condition.question.id}_answer`]
-
-  return (
-    subAnswer === undefined ||
-    (Array.isArray(subAnswer) && subAnswer.length === 0)
-  )
-}
-
-                    
-                    // Para perguntas normais, validação original
+                    if (question.type === 'text-input') {
+                      const val = answers[`question_${question.id}_answer`]
+                      return !val || val.toString().trim() === ''
+                    }
+                    if (question.type === 'dynamic-cards') {
+                      const opts = (question as DynamicCardsQuestion).getOptions(answers)
+                      if (opts.length === 0) return false // sem opções → permite avançar
+                      return currentAnswer === undefined
+                    }
                     return currentAnswer === undefined || (Array.isArray(currentAnswer) && currentAnswer.length === 0)
                   })()}
                 >

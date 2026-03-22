@@ -237,15 +237,15 @@ export const TutorProfile = () => {
   const academicDegree: string = raw.question_2_answer || currentData.education || ''
   const hasExperience: boolean = raw.question_3_answer === 'Sim'
   const experienceYears: string = raw.question_3_extra || ''
-  const district: string = raw.question_10_answer || ''
-  const municipality: string = raw.question_11_answer || ''
-  const parish: string = raw.question_12_answer || ''
+  const district: string = raw.question_11_answer || raw.question_10_answer || ''
+  const municipality: string = raw.question_12_answer || raw.question_11_answer || ''
+  const parish: string = raw.question_13_answer || raw.question_12_answer || ''
   const horasSemana: string = raw.question_6_answer || ''
   const teachingType: string = Array.isArray(raw.question_1_answer)
     ? raw.question_1_answer[0]
     : raw.question_1_answer || ''
-  // Plataforma online usa id 102 no questionário
-  const platform: string = raw.question_102_answer || ''
+  // Plataforma (Q14 novo, Q102 legacy)
+  const platform: string = raw.question_14_answer || raw.question_102_answer || ''
 
   const deriveHourlyRate = (answer: string): string => {
     if (!answer) return ''
