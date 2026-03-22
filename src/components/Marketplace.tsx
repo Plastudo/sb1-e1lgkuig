@@ -38,10 +38,13 @@ export const Marketplace = () => {
     loadTutors()
   }, [])
 
-  // 🔹 Filtros
+  // 🔹 Filtros de Pesquisa Cruzada
+  // Atualiza a vista sempre que o utilizador altera a pesquisa por texto, ou seleciona uma disciplina do array.
   useEffect(() => {
     let filtered = tutors
 
+    // 1️⃣ Aplicar filtro de texto (barra de pesquisa)
+    // Aqui procuramos matches parciais ou totais por nome, disciplinas associadas ou localização
     if (searchTerm) {
       const term = searchTerm.toLowerCase()
 
@@ -50,10 +53,11 @@ export const Marketplace = () => {
         tutor.subjects?.some(subject =>
           subject.toLowerCase().includes(term)
         ) ||
-        (tutor.location ?? '').toLowerCase().includes(term) // ✅ OPÇÃO A
+        (tutor.location ?? '').toLowerCase().includes(term) // Usa fallback se a location for null
       )
     }
 
+    // 2️⃣ Aplicar filtro de disciplina (botões rápidos/pílulas)
     if (selectedSubject !== 'all') {
       filtered = filtered.filter(tutor =>
         tutor.subjects?.some(subject =>
@@ -62,6 +66,7 @@ export const Marketplace = () => {
       )
     }
 
+    // 3️⃣ Concluir e renderizar a lista
     setFilteredTutors(filtered)
   }, [searchTerm, selectedSubject, tutors])
 

@@ -61,7 +61,12 @@ const handleSubmit = async (e: React.FormEvent) => {
           question_1_answer: ''
         })
         if (insertError) throw insertError
-        onComplete(user.id)
+        
+        // Em vez de onComplete, alternar para Login
+        setIsSignUp(false)
+        setError('')
+        // Opcional: mostrar uma mgs de sucesso ou apenas trocar o ecrã.
+        alert('Conta criada com sucesso! Por favor inicie sessão.')
       }
     } else {
       result = await signIn(email, password)

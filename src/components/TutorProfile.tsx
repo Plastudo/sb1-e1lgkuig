@@ -1,310 +1,492 @@
-
-//-----------------RESUMO GERAL-----------------
-//Este código cria a página de perfil de um tutor para uma plataforma de ensino online.
-//Ele mostra informações do tutor como foto, nome, matérias que ensina, biografia, classificação, localização, disponibilidade, experiência e educação.
-//Permite que o próprio tutor edite seu perfil e que outros utilizadores contactem o tutor por email.
-//Em produção, os dados viriam do Supabase, mas aqui usamos dados simulados (mock).
-
-//-----------------FLUXO DO CÓDIGO-----------------
-// 1. Importa React, hooks, navegação, animações, componentes de UI e ícones.
-// 2. Define dados simulados de tutores (mockTutorData).
-// 3. Define um tipo ExtendedTutorData para incluir campos adicionais ao TutorData.
-// 4. Cria o componente TutorProfile e inicializa estados: tutor, modo de edição, dados em edição e carregamento.
-// 5. useEffect carrega os dados do tutor ou redireciona se não houver id válido.
-// 6. Define isOwner para saber se o utilizador logado é o dono do perfil.
-// 7. handleSave atualiza os dados do tutor (em produção, salvaria no Supabase).
-// 8. handleContactTutor abre o cliente de email para enviar mensagem ao tutor.
-// 9. Renderiza interface de carregamento, mensagem de erro ou o perfil completo do tutor com cartões e animações.
-// 10. Mostra estatísticas, matérias, biografia, formação, experiência e botões de edição/contacto conforme o utilizador.
-
-//-----------------CODE-----------------
-
-import React, { useEffect, useState } from 'react' // Importa React e hooks para gerir estado e efeitos
-import { useParams, useNavigate } from 'react-router-dom' // Importa funções de navegação e parâmetros de URL
-import { motion } from 'framer-motion' // Importa biblioteca para animações
-import { Card } from './ui/card' // Componente Card para agrupar conteúdo visual
-import { Button } from './ui/button' // Botão estilizado
-import { Input } from './ui/input' // Campo de texto
-import { Textarea } from './ui/textarea' // Campo de texto multi-linha
-import { Badge } from './ui/badge' // Etiquetas para matérias
-import { useAuth } from '../contexts/AuthContext' // Contexto de autenticação do utilizador
-import { supabase, TutorData } from '../lib/supabase' // Supabase e tipo de dados do tutor
+import React, { useEffect, useState, useRef } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { Card } from './ui/card'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Textarea } from './ui/textarea'
+import { useAuth } from '../contexts/AuthContext'
+import { supabase, TutorData } from '../lib/supabase'
 import { 
-  Star, 
-  Mail, 
-  MapPin, 
-  Clock, 
-  Edit3, 
-  Save, 
-  X, 
-  GraduationCap,
-  Award,
-  BookOpen,
-  User
-} from 'lucide-react' // Ícones usados no perfil
+  Star, Mail, MapPin, Clock, Edit3, Save, X, GraduationCap,
+  BookOpen, User, Target, Gamepad, Video, Home, CheckCircle2,
+  Camera, Loader2
+} from 'lucide-react'
 
-//-----------------DADOS SIMULADOS-----------------
-const mockTutorData = { /* ...tutores mock... */ } 
-// Simula dados de tutores para demonstração
-
-//-----------------TIPO DE DADOS-----------------
-type ExtendedTutorData = TutorData & {
-  rating: number           // Classificação média do tutor
-  location: string         // Localização
-  availability: string     // Disponibilidade de horários
-  experience: string       // Experiência profissional
-  education: string        // Formação académica
-  profile_picture: string   // URL da foto do tutor
-  hourlyRate: string       // Preço por hora
-  totalStudents: number    // Total de alunos atendidos
-  successRate: string      // Taxa de sucesso
-}
-
-//-----------------COMPONENTE PRINCIPAL-----------------
 export const TutorProfile = () => {
-  const { id } = useParams<{ id: string }>() 
-  // Obtém "id" do tutor da URL (ex.: /tutor/123)
+  const { id } = useParams<{ id: string }>()
+  const { user } = useAuth()
+  const navigate = useNavigate()
 
-  const { user } = useAuth() 
-  // Dados do utilizador logado (para saber se é o dono do perfil)
+  const [tutor, setTutor] = useState<TutorData | null>(null)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editData, setEditData] = useState<Partial<TutorData>>({})
+  const [loading, setLoading] = useState(true)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  
+  // O hook de referência (ref) serve para podermos clicar de forma invisível no input de ficheiro ao clicar no avatar
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const navigate = useNavigate() 
-  // Função para navegar entre páginas
-
-  const [tutor, setTutor] = useState<ExtendedTutorData | null>(null) 
-  // Estado que guarda os dados do tutor carregados
-
-  const [isEditing, setIsEditing] = useState(false) 
-  // Estado que controla se o perfil está em modo edição
-
-  const [editData, setEditData] = useState<Partial<ExtendedTutorData>>({}) 
-  // Guarda os dados que estão sendo editados
-
-  const [loading, setLoading] = useState(true) 
-  // Estado de carregamento da página
-
-  //-----------------EFFECT PARA CARREGAR DADOS-----------------
+  // 🔹 Carregamento Inicial
+  // Efectua o fetch dos dados do tutor mal o componente monte, usando o ID do URL.
   useEffect(() => {
-    if (!id) { 
-      navigate('/marketplace') // Redireciona se não houver id
+    if (!id) {
+      navigate('/marketplace')
       return
     }
 
-    // Busca dados simulados
-    const tutorData = mockTutorData[id as keyof typeof mockTutorData]
-    if (tutorData) { 
-      setTutor(tutorData)      // Define o estado do tutor
-      setEditData(tutorData)   // Preenche dados para edição
-    } else {
-      navigate('/marketplace') // Redireciona se tutor não encontrado
+    const fetchTutorData = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('tutores')
+          .select('*')
+          .eq('id', id)
+          .single()
+
+        if (error) throw error
+
+        if (data) {
+          // Ensure raw_answers gets parsed correctly if it's null
+          const tutorWithAns = { ...data, raw_answers: data.raw_answers || {} }
+          setTutor(tutorWithAns)
+          setEditData(tutorWithAns)
+        } else {
+          navigate('/marketplace')
+        }
+      } catch (error) {
+        console.error('Error fetching tutor:', error)
+        navigate('/marketplace')
+      } finally {
+        setLoading(false)
+      }
     }
-    setLoading(false)           // Termina carregamento
+
+    fetchTutorData()
   }, [id, navigate])
 
-  //-----------------VERIFICAÇÃO DE PROPRIEDADE-----------------
-  const isOwner = user && tutor && user.id === tutor.user_id 
-  // Verifica se o utilizador logado é o dono do perfil (permite editar)
+  // Condição para validar se quem está a visualizar o perfil é o próprio dono
+  const isOwner = user && tutor && user.id === tutor.user_id
 
-  //-----------------FUNÇÃO SALVAR EDIÇÃO-----------------
+  // 🔹 Guardar Alterações
+  // Sincroniza o estado atualizado com a base de dados do Supabase (`tutores`)
   const handleSave = async () => {
-    if (!tutor || !isOwner) return // Apenas o dono pode salvar
+    if (!tutor || !isOwner) return
 
     try {
-      // Em produção, aqui faria update no Supabase:
-      // const { error } = await supabase.from('tutores').update(editData).eq('id', tutor.id)
-      // if (error) throw error
+      // Sync raw_answers text data with our editData changes before pushing
+      const updatedRawAnswers = { ...editData.raw_answers }
+      
+      // We also update specific raw_answers properties if the root fields changed
+      // Note: Full array editing requires a more complex UI, so we keep them as tags for now.
+      
+      const payloadToUpdate = {
+        ...editData,
+        raw_answers: updatedRawAnswers
+      }
 
-      setTutor({ ...tutor, ...editData }) // Atualiza estado local
-      setIsEditing(false)                 // Sai do modo edição
+      const { error } = await supabase.from('tutores').update(payloadToUpdate).eq('id', tutor.id)
+      if (error) throw error
+
+      setTutor(payloadToUpdate as unknown as TutorData)
+      setIsEditing(false)
     } catch (error) {
-      console.error('Error updating profile:', error) // Log de erro
+      console.error('Error updating profile:', error)
+      alert("Houve um erro ao guardar as alterações.")
     }
   }
 
-  //-----------------FUNÇÃO CONTACTAR TUTOR-----------------
+  // 🔹 Upload da Imagem de Perfil
+  // Lida com o fluxo de armazenamento da nova imagem no bucket 'avatars' do Supabase Storage
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    try {
+      if (!e.target.files || e.target.files.length === 0 || !tutor || !isOwner) return
+      
+      const file = e.target.files[0]
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${tutor.id}-${Math.random()}.${fileExt}`
+      const filePath = `${fileName}`
+
+      setUploadingImage(true)
+
+      // Upload image to Supabase Storage 'avatars' bucket
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file)
+
+      if (uploadError) throw uploadError
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath)
+
+      // Update tutor record with new profile_picture URL
+      const { error: updateError } = await supabase
+        .from('tutores')
+        .update({ profile_picture: publicUrl })
+        .eq('id', tutor.id)
+
+      if (updateError) throw updateError
+
+      setTutor({ ...tutor, profile_picture: publicUrl })
+      setEditData(prev => ({ ...prev, profile_picture: publicUrl }))
+
+    } catch (error) {
+      console.error('Error uploading image:', error)
+      alert('Erro ao fazer upload da imagem de perfil. Verifica se rodaste o script SQL para criar o Bucket "avatars".')
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
   const handleContactTutor = () => {
     if (!tutor) return
-    // Cria link mailto com assunto e corpo pré-preenchido
     const subject = encodeURIComponent(`Interessado em explicações - Plastudo`)
     const body = encodeURIComponent(
       `Olá ${tutor.name},\n\nEncontrei o seu perfil na Plastudo e estou interessado(a) nas suas explicações.\n\nPodemos conversar sobre disponibilidade e condições?\n\nObrigado(a)!`
     )
     window.location.href = `mailto:${tutor.email}?subject=${subject}&body=${body}`
-    // Abre o cliente de email
   }
 
-  //-----------------LOADING-----------------
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8">
-        <div className="max-w-4xl mx-auto px-4">
-          <div className="animate-pulse">
-            {/* Barras simulando título, imagem e descrição */}
-            <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
-            <div className="h-64 bg-gray-200 rounded mb-4"></div>
-            <div className="h-32 bg-gray-200 rounded"></div>
-          </div>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
       </div>
     )
   }
 
-  //-----------------SE TUTOR NÃO ENCONTRADO-----------------
   if (!tutor) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8">
-        <div className="max-w-4xl mx-auto px-4 text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Explicador não encontrado</h2>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="p-8 bg-white rounded-2xl shadow-sm text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Explicador não encontrado</h2>
           <Button onClick={() => navigate('/marketplace')}>Voltar ao marketplace</Button>
         </div>
       </div>
     )
   }
 
-  //-----------------RENDERIZAÇÃO PRINCIPAL-----------------
+  // Define data references (preferring editData if in edit mode, falling back to tutor)
+  const currentData = isEditing ? editData : tutor
+  const raw = typeof currentData.raw_answers === 'object' && currentData.raw_answers !== null 
+              ? currentData.raw_answers 
+              : {}
+
+  const teachingLevels: string[] = raw.question_4_answer || []
+  const methodology: string[] = raw.question_15_answer || []
+  const specialNeeds: string[] = raw.question_17_answer || []
+  const format = raw.question_9_answer || 'indiferente'
+  const hobbies: string[] = raw.question_16_answer || []
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
+    <div className="min-h-screen bg-[#F7F9FC] font-sans pb-16">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
 
-        {/* BOTÃO VOLTAR */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-          <Button variant="outline" onClick={() => navigate(-1)} className="mb-4">← Voltar</Button>
-        </motion.div>
+        <div className="flex justify-between items-center mb-6">
+          <Button variant="outline" onClick={() => navigate(-1)} className="rounded-xl border-gray-200">
+            ← Voltar
+          </Button>
 
-        {/* CARD DO PERFIL */}
-        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <Card className="p-8 shadow-xl border-0 bg-white/80 backdrop-blur-sm mb-6">
-            <div className="flex flex-col lg:flex-row gap-8">
+          {isOwner && (
+            <div className="flex gap-2">
+              {isEditing ? (
+                <>
+                  <Button onClick={() => { setIsEditing(false); setEditData(tutor) }} variant="outline" className="rounded-xl">
+                    <X className="w-4 h-4 mr-2" /> Cancelar
+                  </Button>
+                  <Button onClick={handleSave} className="bg-green-600 hover:bg-green-700 rounded-xl">
+                    <Save className="w-4 h-4 mr-2" /> Guardar Perfil
+                  </Button>
+                </>
+              ) : (
+                <Button onClick={() => setIsEditing(true)} variant="outline" className="rounded-xl bg-white">
+                  <Edit3 className="w-4 h-4 mr-2" /> Editar Perfil
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
 
-              {/* FOTO E INFORMAÇÕES BÁSICAS */}
-              <div className="text-center lg:text-left">
-                <img src={tutor.profile_picture} alt={tutor.name} className="w-32 h-32 rounded-2xl mx-auto lg:mx-0 mb-4 object-cover ring-4 ring-yellow-100" />
-                <div className="space-y-2">
-                  {/* CLASSIFICAÇÃO */}
-                  <div className="flex items-center justify-center lg:justify-start space-x-2">
-                    <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                    <span className="font-semibold text-lg">{tutor.rating}</span>
-                    <span className="text-gray-600">({tutor.totalStudents} alunos)</span>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          
+          {/* Main Content Area (Left side) */}
+          <div className="lg:col-span-8 space-y-8">
+            
+            {/* About Me Section */}
+            <Card className="p-8 bg-white rounded-3xl shadow-sm border-0 transition-all">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6 font-display">Acerca do Professor</h2>
+              
+              {isEditing ? (
+                <Textarea 
+                  value={currentData.bio || ''} 
+                  onChange={(e) => setEditData({ ...editData, bio: e.target.value })}
+                  placeholder="Apresenta-te aos teus futuros alunos..." 
+                  className="min-h-[200px] text-lg rounded-2xl resize-y"
+                />
+              ) : (
+                currentData.bio ? (
+                  <div className="prose prose-lg text-gray-600 leading-relaxed whitespace-pre-wrap">
+                    {currentData.bio}
                   </div>
-                  {/* LOCALIZAÇÃO */}
-                  <div className="flex items-center justify-center lg:justify-start space-x-2 text-gray-600">
-                    <MapPin className="h-4 w-4" />
-                    <span>{tutor.location}</span>
-                  </div>
-                  {/* DISPONIBILIDADE */}
-                  <div className="flex items-center justify-center lg:justify-start space-x-2 text-gray-600">
-                    <Clock className="h-4 w-4" />
-                    <span>{tutor.availability}</span>
-                  </div>
+                ) : (
+                  <p className="text-gray-500 italic">Uma breve apresentação ajuda-te a ganhar mais alunos!</p>
+                )
+              )}
+            </Card>
+
+            {/* Subjects & Levels */}
+            <Card className="p-8 bg-white rounded-3xl shadow-sm border-0">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+                  <BookOpen className="w-5 h-5" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 font-display">O que ensino</h2>
+              </div>
+              
+              <div className="mb-6">
+                <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Disciplinas</h3>
+                <div className="flex flex-wrap gap-2">
+                  {currentData.subjects?.map((s) => (
+                    <span key={s} className="px-4 py-2 bg-blue-50 text-blue-700 rounded-xl text-sm font-medium">
+                      {s}
+                    </span>
+                  ))}
+                  {(!currentData.subjects || currentData.subjects.length === 0) && <span className="text-gray-500">-</span>}
                 </div>
               </div>
 
-              {/* CONTEÚDO PRINCIPAL */}
-              <div className="flex-1">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    {/* NOME EDITÁVEL */}
-                    {isEditing ? (
-                      <Input value={editData.name || ''} onChange={(e) => setEditData({ ...editData, name: e.target.value })} className="text-3xl font-bold mb-2" />
-                    ) : (
-                      <h1 className="text-3xl font-bold text-gray-900 mb-2">{tutor.name}</h1>
-                    )}
-                    {/* TARIFA */}
-                    <p className="text-xl text-green-600 font-semibold mb-2">{tutor.hourlyRate}</p>
-                  </div>
-
-                  {/* BOTÕES DE EDIÇÃO */}
-                  {isOwner && (
-                    <div className="space-x-2">
-                      {isEditing ? (
-                        <>
-                          <Button onClick={handleSave} size="sm"><Save className="h-4 w-4 mr-2" />Guardar</Button>
-                          <Button variant="outline" onClick={() => { setIsEditing(false); setEditData(tutor) }} size="sm"><X className="h-4 w-4 mr-2" />Cancelar</Button>
-                        </>
-                      ) : (
-                        <Button onClick={() => setIsEditing(true)} variant="outline" size="sm"><Edit3 className="h-4 w-4 mr-2" />Editar perfil</Button>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* MATÉRIAS */}
-                <div className="mb-4">
+              {teachingLevels.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Níveis lecionados</h3>
                   <div className="flex flex-wrap gap-2">
-                    {tutor.subjects?.map(subject => (
-                      <Badge key={subject} className="bg-green-100 text-green-700 hover:bg-green-200">{subject}</Badge>
+                    {teachingLevels.map((lvl: string) => (
+                      <span key={lvl} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium border border-gray-200">
+                        {lvl}
+                      </span>
                     ))}
                   </div>
                 </div>
+              )}
+            </Card>
 
-                {/* BIOGRAFIA */}
-                <div className="mb-6">
-                  {isEditing ? (
-                    <Textarea value={editData.bio || ''} onChange={(e) => setEditData({ ...editData, bio: e.target.value })} placeholder="Conte sobre a sua experiência e metodologia..." rows={4} />
-                  ) : (
-                    <p className="text-gray-700 leading-relaxed">{tutor.bio}</p>
-                  )}
+            {/* Methodology & Approach */}
+            {(methodology.length > 0 || specialNeeds.length > 0) && (
+              <Card className="p-8 bg-white rounded-3xl shadow-sm border-0">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600">
+                    <Target className="w-5 h-5" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900 font-display">Metodologia</h2>
                 </div>
-
-                {/* BOTÃO DE CONTACTO */}
-                {!isOwner && (
-                  <Button onClick={handleContactTutor} size="lg" className="w-full sm:w-auto bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600">
-                    <Mail className="h-5 w-5 mr-2" />Contactar por email
-                  </Button>
+                
+                {methodology.length > 0 && (
+                  <div className="mb-6">
+                    <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Abordagem de Ensino</h3>
+                    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {methodology.map((m: string) => (
+                        <li key={m} className="flex items-start gap-2 text-gray-600">
+                          <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
+                          <span>{m}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
-              </div>
+
+                {specialNeeds.length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Perfil de Alunos (Áreas de conforto)</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {specialNeeds.map((sn: string) => (
+                        <span key={sn} className="px-3 py-1 bg-emerald-50/50 text-emerald-700 rounded-lg text-sm border border-emerald-100">
+                          {sn}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </Card>
+            )}
+
+            {/* Format & Extras side-by-side */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+              <Card className="p-8 bg-white rounded-3xl shadow-sm border-0">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center text-purple-600">
+                    <MapPin className="w-5 h-5" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900 font-display">Local</h2>
+                </div>
+                
+                <div className="flex items-center gap-3 text-gray-700 bg-gray-50 p-4 rounded-2xl">
+                  {format.includes('online') ? <Video className="w-6 h-6 text-purple-500" /> : <Home className="w-6 h-6 text-purple-500" />}
+                  <div className="text-lg capitalize font-medium">
+                    {format === 'indiferente' ? 'Presencial ou Online' : format.replace('-', ' ')}
+                  </div>
+                </div>
+              </Card>
+              
+              {hobbies.length > 0 && (
+                <Card className="p-8 bg-white rounded-3xl shadow-sm border-0">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center text-orange-600">
+                      <Gamepad className="w-5 h-5" />
+                    </div>
+                    <h2 className="text-2xl font-bold text-gray-900 font-display">Interesses</h2>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {hobbies.map((h: string) => (
+                      <span key={h} className="px-4 py-2 bg-orange-50 text-orange-700 rounded-xl text-sm font-medium">
+                        {h}
+                      </span>
+                    ))}
+                  </div>
+                </Card>
+              )}
             </div>
-          </Card>
-        </motion.div>
 
-        {/* ESTATÍSTICAS */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-          {/* TAXA DE SUCESSO */}
-          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-            <Card className="p-6 text-center border-0 bg-white/80 backdrop-blur-sm">
-              <Award className="h-8 w-8 text-yellow-500 mx-auto mb-3" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">Taxa de sucesso</h3>
-              <p className="text-2xl font-bold text-green-600">{tutor.successRate}</p>
-            </Card>
-          </motion.div>
+          </div>
 
-          {/* TOTAL DE ALUNOS */}
-          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-            <Card className="p-6 text-center border-0 bg-white/80 backdrop-blur-sm">
-              <User className="h-8 w-8 text-blue-500 mx-auto mb-3" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">Alunos</h3>
-              <p className="text-2xl font-bold text-blue-600">{tutor.totalStudents}+</p>
-            </Card>
-          </motion.div>
+          {/* Sticky Sidebar (Right side) */}
+          <div className="lg:col-span-4 relative">
+            <div className="sticky top-8">
+              <Card className="p-6 bg-white rounded-3xl shadow-lg border-0 overflow-hidden relative">
+                
+                {/* Visual Header Background Element */}
+                <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-br from-green-400 to-blue-500 opacity-20" />
+                
+                <div className="relative pt-6 flex flex-col items-center">
+                  
+                  {/* Editable Avatar */}
+                  <div className="relative mb-4 group">
+                    <img
+                      src={currentData.profile_picture || "/default-avatar.png"}
+                      alt={currentData.name}
+                      className={`w-36 h-36 rounded-full object-cover border-4 border-white shadow-md transition-all ${isEditing ? 'group-hover:opacity-60' : ''}`}
+                    />
+                    {isEditing && (
+                      <>
+                        <div 
+                          className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 rounded-full cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          {uploadingImage ? (
+                            <Loader2 className="w-8 h-8 text-white animate-spin" />
+                          ) : (
+                            <Camera className="w-10 h-10 text-white" />
+                          )}
+                          <span className="text-white text-xs font-semibold mt-1">Alterar Foto</span>
+                        </div>
+                        <input 
+                          type="file" 
+                          ref={fileInputRef} 
+                          className="hidden" 
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          disabled={uploadingImage}
+                        />
+                      </>
+                    )}
+                  </div>
 
-          {/* EXPERIÊNCIA */}
-          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-            <Card className="p-6 text-center border-0 bg-white/80 backdrop-blur-sm">
-              <GraduationCap className="h-8 w-8 text-purple-500 mx-auto mb-3" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">Experiência</h3>
-              <p className="text-2xl font-bold text-purple-600">{tutor.experience}</p>
-            </Card>
-          </motion.div>
+                  {isEditing ? (
+                    <Input 
+                      value={currentData.name || ''} 
+                      onChange={(e) => setEditData({ ...editData, name: e.target.value })} 
+                      className="text-2xl font-bold text-center mb-1 h-12 rounded-xl" 
+                      placeholder="O teu nome"
+                    />
+                  ) : (
+                    <h1 className="text-2xl font-bold text-gray-900 text-center mb-1">{currentData.name}</h1>
+                  )}
+
+                  {isEditing ? (
+                    <Input 
+                      value={currentData.hourly_rate || ''} 
+                      onChange={(e) => setEditData({ ...editData, hourly_rate: e.target.value })} 
+                      className="text-green-600 font-bold text-center text-xl mb-6 mt-2 rounded-xl h-10" 
+                      placeholder="Ex: 15€ / hora"
+                    />
+                  ) : (
+                    <p className="text-green-600 font-bold text-2xl mb-6">{currentData.hourly_rate || 'Preço sob consulta'}</p>
+                  )}
+
+                  <div className="w-full space-y-4 mb-8">
+                    <div className="flex items-center justify-between text-gray-600">
+                      <div className="flex items-center gap-2">
+                        <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
+                        <span className="font-medium text-gray-900">{currentData.rating || 'Novo'}</span>
+                      </div>
+                      <span className="text-sm bg-gray-100 px-2 py-1 rounded-md">{currentData.total_students || 0} alunos ativos</span>
+                    </div>
+
+                    <div className="h-px w-full bg-gray-100 my-4" />
+
+                    <div className="flex items-center gap-3 text-gray-600 mb-2">
+                      <GraduationCap className="w-5 h-5 shrink-0 text-gray-400" />
+                      {isEditing ? (
+                         <Input 
+                         value={currentData.education || ''} 
+                         onChange={(e) => setEditData({ ...editData, education: e.target.value })} 
+                         className="h-8 text-sm" 
+                         placeholder="Ex: Licenciatura Univ. Lisboa"
+                       />
+                      ) : (
+                        <span className="text-sm">{currentData.education || 'Formação não especificada'}</span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-3 text-gray-600 mb-2">
+                      <Clock className="w-5 h-5 shrink-0 text-gray-400" />
+                      {isEditing ? (
+                         <Input 
+                         value={currentData.availability_summary || ''} 
+                         onChange={(e) => setEditData({ ...editData, availability_summary: e.target.value })} 
+                         className="h-8 text-sm" 
+                         placeholder="Ex: Fim de semana / Pós-laboral"
+                       />
+                      ) : (
+                        <span className="text-sm">{currentData.availability_summary || 'Disponibilidade a combinar'}</span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-3 text-gray-600">
+                      <User className="w-5 h-5 shrink-0 text-gray-400" />
+                      {isEditing ? (
+                         <Input 
+                         value={currentData.experience || ''} 
+                         onChange={(e) => setEditData({ ...editData, experience: e.target.value })} 
+                         className="h-8 text-sm" 
+                         placeholder="Ex: 2 anos"
+                       />
+                      ) : (
+                        <span className="text-sm">Exp: {currentData.experience || 'Iniciante'}</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {!isOwner && (
+                    <Button
+                      onClick={handleContactTutor}
+                      className="w-full py-6 text-lg font-semibold bg-green-600 hover:bg-green-700 text-white rounded-2xl shadow-lg hover:shadow-xl transition-all"
+                    >
+                      <Mail className="w-5 h-5 mr-2" />
+                      Marcar Aula
+                    </Button>
+                  )}
+                  {isOwner && isEditing && (
+                    <div className="w-full p-4 bg-orange-50 border border-orange-100 rounded-xl text-center text-sm text-orange-700 flex flex-col gap-2">
+                        <strong>Modo de Edição Ativo</strong>
+                        Altera os dados textuais nos campos acima ou carrega na fotografia para fazeres o upload de uma nova imagem.
+                    </div>
+                  )}
+                  <p className="text-xs text-center text-gray-400 mt-4">Resposta habitualmente em poucas horas</p>
+                </div>
+              </Card>
+            </div>
+          </div>
+
         </div>
-
-        {/* FORMAÇÃO E EXPERIÊNCIA */}
-        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
-          <Card className="p-6 border-0 bg-white/80 backdrop-blur-sm">
-            <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-              <BookOpen className="h-6 w-6 mr-2 text-green-600" />Formação e Experiência
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-semibold text-gray-800 mb-1">Formação Académica</h4>
-                <p className="text-gray-600">{tutor.education}</p>
-              </div>
-              <div>
-                <h4 className="font-semibold text-gray-800 mb-1">Experiência Profissional</h4>
-                <p className="text-gray-600">{tutor.experience}</p>
-              </div>
-            </div>
-          </Card>
-        </motion.div>
       </div>
     </div>
   )

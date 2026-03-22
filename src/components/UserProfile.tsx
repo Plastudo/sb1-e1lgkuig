@@ -65,16 +65,21 @@ export const UserProfile = () => {
   }, [user, authLoading, navigate])
 
   //-----------------FUNÇÃO LOAD-----------------
+  // Esta função carrega os dados específicos de Tutor associados ao utilizador atual
   const loadTutorProfile = async () => {
     if (!user) return
 
     try {
+      // Pedido Supabase: procura 1 registo (single) na tabela 'tutores' com o mesmo user_id
       const { data, error } = await supabase
         .from('tutores')
         .select('*')
         .eq('user_id', user.id)
         .single()
 
+      // 🔹 Tratamento de Erro Específico:
+      // PGRST116 é o código do PostgREST para "Zero linhas retornadas" da DB.
+      // Ignoramos este erro intencionalmente, pois significa apenas que o user ainda não é tutor (não completou o questionário).
       if (error && error.code !== 'PGRST116') {
         throw error
       }
