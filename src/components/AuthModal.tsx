@@ -51,18 +51,8 @@ const handleSubmit = async (e: React.FormEvent) => {
   try {
     if (isSignUp) {
       result = await signUp(email, password)
-      const user = result.data?.user
-
-      if (user) {
-        const { error: insertError } = await supabase.from('tutores').insert({
-          user_id: user.id,
-          name,
-          email,
-          question_1_answer: ''
-        })
-        if (insertError) throw insertError
-        
-        // Em vez de onComplete, alternar para Login
+      if (result.data?.user) {
+        // Não cria registo vazio — o handleRegistrationComplete trata disso após login
         setIsSignUp(false)
         setError('')
       }

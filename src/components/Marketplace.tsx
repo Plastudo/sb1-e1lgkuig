@@ -19,6 +19,7 @@ export const Marketplace = () => {
       const { data, error } = await supabase
         .from('tutores')
         .select('*')
+        .order('created_at', { ascending: false })
 
       if (error) {
         console.error('Erro ao carregar tutores:', error)
@@ -26,8 +27,16 @@ export const Marketplace = () => {
       }
 
       if (data) {
-        setTutors(data as TutorData[])
-        setFilteredTutors(data as TutorData[])
+        // Deduplica por user_id — mantém o registo mais recente
+        const seen = new Set<string>()
+        const unique = (data as TutorData[]).filter(t => {
+          const key = t.user_id || t.id || ''
+          if (seen.has(key)) return false
+          seen.add(key)
+          return true
+        })
+        setTutors(unique)
+        setFilteredTutors(unique)
       }
     } catch (err) {
       console.error('Erro inesperado:', err)
@@ -48,22 +57,28 @@ export const Marketplace = () => {
     if (searchTerm) {
       const term = searchTerm.toLowerCase()
 
-      filtered = filtered.filter(tutor =>
-        tutor.name.toLowerCase().includes(term) ||
-        tutor.subjects?.some(subject =>
-          subject.toLowerCase().includes(term)
-        ) ||
-        (tutor.location ?? '').toLowerCase().includes(term) // Usa fallback se a location for null
-      )
+      filtered = filtered.filter(tutor => {
+        const raw = tutor.raw_answers || {}
+        const subjects: string[] = raw.question_5_answer || tutor.subjects || []
+        const district: string = raw.question_10_answer || ''
+        const municipality: string = raw.question_11_answer || ''
+        const location = tutor.location || `${municipality} ${district}`
+
+        return (
+          tutor.name.toLowerCase().includes(term) ||
+          subjects.some(s => s.toLowerCase().includes(term)) ||
+          location.toLowerCase().includes(term)
+        )
+      })
     }
 
     // 2️⃣ Aplicar filtro de disciplina (botões rápidos/pílulas)
     if (selectedSubject !== 'all') {
-      filtered = filtered.filter(tutor =>
-        tutor.subjects?.some(subject =>
-          subject.toLowerCase().includes(selectedSubject.toLowerCase())
-        )
-      )
+      filtered = filtered.filter(tutor => {
+        const raw = tutor.raw_answers || {}
+        const subjects: string[] = raw.question_5_answer || tutor.subjects || []
+        return subjects.some(s => s.toLowerCase().includes(selectedSubject.toLowerCase()))
+      })
     }
 
     // 3️⃣ Concluir e renderizar a lista
@@ -136,7 +151,15 @@ export const Marketplace = () => {
 
         {/* Tutors */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredTutors.map((tutor, index) => (
+          {filteredTutors.map((tutor, index) => {
+            const raw = tutor.raw_answers || {}
+            const displaySubjects: string[] = raw.question_5_answer || tutor.subjects || []
+            const district: string = raw.question_10_answer || ''
+            const municipality: string = raw.question_11_answer || ''
+            const displayLocation = tutor.location || [municipality, district].filter(Boolean).join(', ') || '—'
+            const displayHours: string = raw.question_6_answer || tutor.availability_summary || '—'
+
+            return (
             <motion.div
               key={tutor.id}
               initial={{ opacity: 0, y: 30 }}
@@ -161,17 +184,32 @@ export const Marketplace = () => {
                   <div className="flex justify-center gap-4 text-sm text-gray-500 mt-2">
                     <span className="flex items-center gap-1">
                       <MapPin className="h-4 w-4" />
-                      {tutor.location ?? '—'}
+                      {displayLocation}
                     </span>
                     <span className="flex items-center gap-1">
                       <Clock className="h-4 w-4" />
-                      {tutor.availability ?? '—'}
+                      {displayHours}
                     </span>
                   </div>
                 </div>
 
+                {displaySubjects.length > 0 && (
+                  <div className="flex flex-wrap gap-1 justify-center mb-3">
+                    {displaySubjects.slice(0, 3).map(s => (
+                      <span key={s} className="px-2 py-0.5 bg-green-50 text-green-700 rounded-full text-xs font-medium">
+                        {s}
+                      </span>
+                    ))}
+                    {displaySubjects.length > 3 && (
+                      <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full text-xs">
+                        +{displaySubjects.length - 3}
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 <p className="text-sm text-gray-600 line-clamp-3 mb-4">
-                  {tutor.bio}
+                  {tutor.bio || 'Sem apresentação ainda.'}
                 </p>
 
                 <div className="mt-auto space-y-2">
@@ -191,7 +229,8 @@ export const Marketplace = () => {
                 </div>
               </Card>
             </motion.div>
-          ))}
+            )
+          })}
         </div>
       </div>
     </div>

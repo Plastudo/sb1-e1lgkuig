@@ -405,43 +405,53 @@ export const TutorQuestionnaire = () => {
   //-----------------HANDLE REGISTRATION COMPLETE-----------------
   const handleRegistrationComplete = async (userId: string) => {
     try {
-      const { data: tempData, error: tempError } = await supabase
-        .from('temp_tutores')
-        .select('*')
-        .eq('session_id', sessionId)
-        .single()
-      if (tempError) throw tempError
-
-      const { data: authData, error: authError } = await supabase.auth.getUser()
-      if (authError) throw authError
+      const { data: authData } = await supabase.auth.getUser()
       const user = authData?.user
 
-      const rawAnswers = tempData?.raw_answers || {};
-      
+      const rawAnswers = { ...answers }
+
       const tutorData = {
         user_id: userId,
         name: user?.user_metadata?.name || user?.email?.split('@')[0] || '',
         email: user?.email || '',
         question_1_answer: rawAnswers['question_1_answer'] || null,
         raw_answers: rawAnswers,
-        bio: '',
         subjects: rawAnswers['question_5_answer'] || [],
         hourly_rate: rawAnswers['question_7_answer'] || null,
         experience: rawAnswers['question_3_answer'] === 'Sim' ? `${rawAnswers['question_3_extra']} anos` : '-',
         education: rawAnswers['question_2_answer'] || null,
-        profile_picture: ''
       }
 
-      const { data: insertData, error: insertError } = await supabase
+      // Verifica se já existe registo para este user
+      const { data: existing } = await supabase
         .from('tutores')
-        .insert(tutorData)
-      if (insertError) throw insertError
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle()
 
-      await supabase.from('temp_tutores').delete().eq('session_id', sessionId)
+      if (existing?.id) {
+        // Atualiza registo existente
+        const { error } = await supabase
+          .from('tutores')
+          .update(tutorData)
+          .eq('user_id', userId)
+        if (error) throw error
+      } else {
+        // Cria novo registo
+        const { error } = await supabase
+          .from('tutores')
+          .insert({ ...tutorData, bio: '', profile_picture: '' })
+        if (error) throw error
+      }
 
-      navigate('/profile')
-    } catch (error) {
+      // Limpar temp_tutores em background
+      supabase.from('temp_tutores').delete().eq('session_id', sessionId)
+
+    } catch (error: any) {
       console.error('❌ ERRO AO COMPLETAR REGISTO', error)
+      alert(`Erro ao guardar perfil: ${error?.message || error}`)
+    } finally {
+      navigate('/profile')
     }
   }
 
