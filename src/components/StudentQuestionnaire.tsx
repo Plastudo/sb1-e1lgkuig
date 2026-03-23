@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from './ui/button'
 import { Card } from './ui/card'
 import { supabase } from '../lib/supabase'
-import { ChevronRight, ChevronLeft, Check, BookOpen, GraduationCap, User, Building, Gamepad, Calendar, Monitor, Home, Target, MapPin, GripVertical, Mail } from 'lucide-react'
+import { ChevronRight, ChevronLeft, Check, BookOpen, GraduationCap, User, Building, Gamepad, Calendar, Monitor, Home, Target, MapPin, GripVertical, Mail, Star } from 'lucide-react'
 import { getDistritos, getMunicipiosByDistrito, getFreguesiasByMunicipio } from '../data/locationMap'
 import { getBestTutorMatches, TutorMatch } from '../Functions/BestFitTutors'
 import { useAuth } from '../contexts/AuthContext'
@@ -931,23 +931,50 @@ export const StudentQuestionnaire = () => {
                 <h3 className="text-2xl font-bold mb-6 text-center">Os teus matches</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {matched.map((t: any) => (
-                    <Card key={t.tutorId} className="p-6 flex flex-col justify-between">
-                      <div>
-                        <h3 className="text-xl font-bold">{t.name}</h3>
-                        <p className="text-gray-600 mt-1">{t.subjects?.join(", ")}</p>
-                        <div className="mt-3">
-                          <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">
-                            Match: {t.compatibility}%
-                          </span>
+                    <Card
+                      key={t.tutorId}
+                      className="p-6 bg-white/80 shadow hover:shadow-lg transition rounded-2xl flex flex-col"
+                    >
+                      <div className="text-center">
+                        <img
+                          src={t.profile_picture || "/default-avatar.png"}
+                          className="w-20 h-20 rounded-full mx-auto object-cover mb-3"
+                          alt={t.name}
+                        />
+                        <h3 className="text-xl font-semibold">{t.name || "-"}</h3>
+                        <p className="text-green-600 font-medium">{t.subjects?.[0] || "-"}</p>
+                        <div className="flex justify-center items-center space-x-1 mt-2">
+                          <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                          <span className="text-sm">{t.rating ?? "-"}</span>
+                        </div>
+                        <div className="mt-2">
+                          <p className="text-blue-600 font-semibold text-sm mb-1">
+                            Compatibilidade: {t.compatibility}%
+                          </p>
+                          <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-blue-500 transition-all duration-300"
+                              style={{ width: `${t.compatibility}%` }}
+                            />
+                          </div>
                         </div>
                       </div>
-                      <Button
-                        onClick={() => handleContactar(t)}
-                        className="mt-5 w-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-2"
-                      >
-                        <Mail className="w-4 h-4" />
-                        Contactar
-                      </Button>
+                      <p className="text-gray-600 text-sm mt-3 line-clamp-3">{t.bio}</p>
+                      <div className="mt-4 space-y-2">
+                        <Button
+                          variant="outline"
+                          onClick={() => navigate(`/profile/${t.tutorId}`)}
+                          className="w-full"
+                        >
+                          Ver perfil completo
+                        </Button>
+                        <Button
+                          className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white flex items-center justify-center gap-2"
+                          onClick={() => handleContactar(t)}
+                        >
+                          <Mail className="w-4 h-4" /> Contactar
+                        </Button>
+                      </div>
                     </Card>
                   ))}
                 </div>
