@@ -5,9 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from './ui/button'
 import { Card } from './ui/card'
 import { supabase } from '../lib/supabase'
-import { ChevronRight, ChevronLeft, Check, BookOpen, GraduationCap, User, Building, Gamepad, Calendar, Monitor, Home, Target, MapPin, GripVertical } from 'lucide-react'
+import { ChevronRight, ChevronLeft, Check, BookOpen, GraduationCap, User, Building, Gamepad, Calendar, Monitor, Home, Target, MapPin, GripVertical, Mail } from 'lucide-react'
 import { getDistritos, getMunicipiosByDistrito, getFreguesiasByMunicipio } from '../data/locationMap'
 import { getBestTutorMatches, TutorMatch } from '../Functions/BestFitTutors'
+import { useAuth } from '../contexts/AuthContext'
+import { AuthModal } from './AuthModal'
 
 // -----------------QUESTION TYPES-----------------
 type CardsQuestion = {
@@ -388,7 +390,10 @@ export const StudentQuestionnaire = () => {
   const [showResults, setShowResults] = useState(false)
   const [loading, setLoading] = useState(false)
   const [matched, setMatched] = useState<TutorMatch[]>([])
+  const [pendingContactTutor, setPendingContactTutor] = useState<TutorMatch | null>(null)
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false)
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   //-----------------HANDLE ANSWER-----------------
   const handleAnswer = async (questionId: number, answer: any) => {
@@ -434,6 +439,25 @@ export const StudentQuestionnaire = () => {
        setCurrentStep(prev => prev + 1)
     } else {
        handleFinish()
+    }
+  }
+
+  //-----------------HANDLE CONTACTAR-----------------
+  const handleContactar = (tutor: TutorMatch) => {
+    if (user) {
+      window.location.href = `mailto:?subject=Pedido de explicacoes&body=Ola ,%0D%0A%0D%0AEstou interessado nas suas explicacoes e gostaria de saber mais.%0D%0A%0D%0AObrigado!`
+    } else {
+      setPendingContactTutor(tutor)
+      setShowLoginPrompt(true)
+    }
+  }
+
+  //-----------------HANDLE LOGIN COMPLETE-----------------
+  const handleLoginComplete = (_userId: string) => {
+    setShowLoginPrompt(false)
+    if (pendingContactTutor) {
+      window.location.href = `mailto:?subject=Pedido de explicacoes&body=Ola ,%0D%0A%0D%0AEstou interessado nas suas explicacoes e gostaria de saber mais.%0D%0A%0D%0AObrigado!`
+      setPendingContactTutor(null)
     }
   }
 
@@ -859,6 +883,29 @@ export const StudentQuestionnaire = () => {
               </div>
             </Card>
           </>
+        ) : showLoginPrompt ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full"
+          >
+            <div className="mb-4 text-center">
+              <p className="text-gray-500 text-sm">
+                Para contactar <strong>{pendingContactTutor?.name}</strong>, precisas de iniciar sessao.
+              </p>
+              <button
+                onClick={() => { setShowLoginPrompt(false); setPendingContactTutor(null) }}
+                className="mt-2 text-blue-600 hover:underline text-sm"
+              >
+                &larr; Voltar aos resultados
+              </button>
+            </div>
+            <AuthModal
+              onComplete={handleLoginComplete}
+              title="Inicia sessao para continuar"
+              subtitle={`Para contactar ${pendingContactTutor?.name}, entra na tua conta.`}
+            />
+          </motion.div>
         ) : (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -868,33 +915,43 @@ export const StudentQuestionnaire = () => {
             <div className="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
               <Check className="w-10 h-10" />
             </div>
-            <h2 className="text-3xl font-bold mb-4">Questionário Concluído!</h2>
-            <p className="text-gray-600 text-lg mb-8">
-               A analisar os teus matches ideais...
+            <h2 className="text-3xl font-bold mb-4">Questionario Concluido!</h2>
+            <p className="text-gray-600 text-lg mb-4">
+              Aqui estao os teus melhores matches!
             </p>
             <Button
-              onClick={() => navigate('/')}
+              onClick={() => navigate("/")}
               variant="outline"
-              className="mt-4"
+              className="mt-2"
             >
-              Voltar ao Início
+              Voltar ao Inicio
             </Button>
-            
             {matched && matched.length > 0 && (
-                <div className="mt-12 text-left">
-                  <h3 className="text-2xl font-bold mb-4 text-center">Os teus matches</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                     {matched.map((t: any) => (
-                        <Card key={t.tutorId} className="p-6">
-                            <h3 className="text-xl font-bold">{t.name}</h3>
-                            <p className="text-gray-600">{t.subjects?.join(', ')}</p>
-                            <div className="mt-4">
-                              <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">Match: {t.compatibility}%</span>
-                            </div>
-                        </Card>
-                     ))}
-                  </div>
+              <div className="mt-12 text-left">
+                <h3 className="text-2xl font-bold mb-6 text-center">Os teus matches</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {matched.map((t: any) => (
+                    <Card key={t.tutorId} className="p-6 flex flex-col justify-between">
+                      <div>
+                        <h3 className="text-xl font-bold">{t.name}</h3>
+                        <p className="text-gray-600 mt-1">{t.subjects?.join(", ")}</p>
+                        <div className="mt-3">
+                          <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">
+                            Match: {t.compatibility}%
+                          </span>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => handleContactar(t)}
+                        className="mt-5 w-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center gap-2"
+                      >
+                        <Mail className="w-4 h-4" />
+                        Contactar
+                      </Button>
+                    </Card>
+                  ))}
                 </div>
+              </div>
             )}
           </motion.div>
         )}
