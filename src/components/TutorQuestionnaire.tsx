@@ -11,6 +11,7 @@ import { BookOpen, GraduationCap, User, Building, Gamepad, Info } from 'lucide-r
 import { Calendar, Monitor, Home, Target, MapPin } from 'lucide-react'
 import { GripVertical } from 'lucide-react'
 import { getDistritos, getMunicipiosByDistrito, getFreguesiasByMunicipio } from '../data/locationMap'
+import { Footer } from './Footer'
 type CardsQuestion = {
   id: number
   type: 'cards'
@@ -490,7 +491,7 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
               <h2 className="text-2xl font-bold">{question.title}</h2>
               {question.tooltip && (
                 <div className="group relative flex items-center justify-center cursor-help">
-                  <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold ring-2 ring-blue-50">?</div>
+                  <div className="w-5 h-5 rounded-full bg-tutor-green-light text-primary flex items-center justify-center text-xs font-bold ring-2 ring-tutor-green-light/50">?</div>
                   <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 hidden group-hover:block w-80 p-4 bg-gray-900 text-white text-sm rounded-lg shadow-xl z-[100] transition-opacity duration-200 opacity-0 group-hover:opacity-100 text-left pointer-events-none whitespace-pre-line leading-relaxed before:content-[''] before:absolute before:top-1/2 before:-translate-y-1/2 before:right-full before:border-8 before:border-transparent before:border-r-gray-900 border border-gray-700">
                     {question.tooltip}
                   </div>
@@ -505,7 +506,7 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
                 onClick={() => handleAnswer(question.id, option.value)}
                 className={`p-4 rounded-xl border-2 text-left ${
                   answers[`question_${question.id}_answer`] === option.value
-                    ? 'border-blue-500 bg-blue-50'
+                    ? 'border-primary bg-tutor-green-light'
                     : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                 }`}
               >
@@ -520,12 +521,12 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
       return (
         <div className="space-y-6">
           <div className="text-center mb-8 relative">
-            {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-blue-500" />}
+            {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-primary" />}
             <h2 className="text-2xl font-bold inline-flex items-center gap-2">
               {question.title}
               {question.tooltip && (
                 <div className="group relative inline-block cursor-help">
-                  <Info className="w-5 h-5 text-blue-400 hover:text-blue-600 transition-colors" />
+                  <Info className="w-5 h-5 text-primary/60 hover:text-primary transition-colors" />
                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-64 bg-slate-800 text-white text-sm rounded-lg p-3 shadow-lg z-50">
                     {question.tooltip}
                     <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-800"></div>
@@ -543,7 +544,7 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
                 onClick={() => handleAnswer(question.id, option.value)}
                 className={`p-4 rounded-lg border-2 text-left ${
                   answers[`question_${question.id}_answer`] === option.value
-                    ? 'border-blue-500 bg-blue-50'
+                    ? 'border-primary bg-tutor-green-light'
                     : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                 }`}
               >
@@ -563,7 +564,7 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
                   [`question_${question.id}_other`]: e.target.value
                 }))
               }
-              className="w-full p-4 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none text-lg"
+              className="w-full p-4 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none text-lg"
             />
           )}
         </div>
@@ -577,7 +578,7 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
               {question.title}
               {question.tooltip && (
                 <div className="group relative inline-block cursor-help">
-                  <Info className="w-5 h-5 text-blue-400 hover:text-blue-600 transition-colors" />
+                  <Info className="w-5 h-5 text-primary/60 hover:text-primary transition-colors" />
                   <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-64 bg-slate-800 text-white text-sm rounded-lg p-3 shadow-lg z-50">
                     {question.tooltip}
                     <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-slate-800"></div>
@@ -595,7 +596,7 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
                 onClick={() => handleAnswer(question.id, option)}
                 className={`p-4 rounded-lg border-2 text-left ${
                   answers[`question_${question.id}_answer`] === option
-                    ? 'border-blue-500 bg-blue-50'
+                    ? 'border-primary bg-tutor-green-light'
                     : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                 }`}
               >
@@ -616,7 +617,7 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
                   [`question_${question.id}_extra`]: e.target.value
                 }))
               }
-              className="w-full p-4 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none text-lg"
+              className="w-full p-4 border-2 border-gray-200 rounded-lg focus:border-primary focus:outline-none text-lg"
             />
           )}
         </div>
@@ -630,12 +631,12 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
       return (
         <div className="space-y-6">
           <div className="text-center mb-8 relative">
-            {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-purple-500" />}
+            {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-primary" />}
             <h2 className="text-2xl font-bold inline-flex items-center gap-2">
               {question.title}
               {question.tooltip && (
                 <div className="group relative flex items-center justify-center cursor-help">
-                  <div className="w-5 h-5 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center text-xs font-bold ring-2 ring-purple-50">?</div>
+                  <div className="w-5 h-5 rounded-full bg-tutor-green-light text-primary flex items-center justify-center text-xs font-bold ring-2 ring-tutor-green-light/50">?</div>
                   <div className="absolute bottom-full mb-3 hidden group-hover:block w-72 p-4 bg-gray-900 text-white text-sm rounded-lg shadow-xl z-[100] transition-opacity duration-200 opacity-0 group-hover:opacity-100 left-1/2 -translate-x-1/2 text-center pointer-events-none break-words whitespace-normal leading-relaxed before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-8 before:border-transparent before:border-t-gray-900 border border-gray-700">
                     {question.tooltip}
                   </div>
@@ -659,12 +660,12 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
                   }}
                   className={`p-4 rounded-lg border-2 text-left flex justify-between items-center ${
                     isSelected
-                      ? 'border-purple-500 bg-purple-50 text-purple-700'
+                      ? 'border-primary bg-tutor-green-light text-foreground'
                       : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                   }`}
                 >
                   <span>{option.label}</span>
-                  {isSelected && <Check className="w-5 h-5 text-purple-600" />}
+                  {isSelected && <Check className="w-5 h-5 text-primary" />}
                 </button>
               )
             })}
@@ -706,7 +707,7 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
                         key={slot}
                         onClick={() => handleAnswer(question.id, { ...selected, [key]: !isSelected })}
                         className={`border p-2 rounded-lg w-full text-sm ${
-                          isSelected ? 'bg-green-500 text-white' : 'bg-gray-100 hover:bg-gray-200'
+                          isSelected ? 'bg-primary text-primary-foreground' : 'bg-gray-100 hover:bg-gray-200'
                         }`}
                       >
                         {slot}
@@ -726,12 +727,12 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
   return (
     <div className="space-y-6">
       <div className="text-center mb-8 relative">
-        {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-blue-500" />}
+        {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-primary" />}
         <h2 className="text-2xl font-bold inline-flex items-center gap-2">
           {question.title}
           {question.tooltip && (
             <div className="group relative flex items-center justify-center cursor-help">
-              <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold ring-2 ring-blue-50">?</div>
+              <div className="w-5 h-5 rounded-full bg-tutor-green-light text-primary flex items-center justify-center text-xs font-bold ring-2 ring-tutor-green-light/50">?</div>
               <div className="absolute bottom-full mb-3 hidden group-hover:block w-72 p-4 bg-gray-900 text-white text-sm rounded-lg shadow-xl z-[100] transition-opacity duration-200 opacity-0 group-hover:opacity-100 left-1/2 -translate-x-1/2 text-center pointer-events-none break-words whitespace-normal leading-relaxed before:content-[''] before:absolute before:top-full before:left-1/2 before:-translate-x-1/2 before:border-8 before:border-transparent before:border-t-gray-900 border border-gray-700">
                 {question.tooltip}
               </div>
@@ -750,7 +751,7 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
               onClick={() => handleAnswer(question.id, option.value)}
               className={`p-4 rounded-lg border-2 text-left flex flex-col items-start ${
                 isSelected
-                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  ? 'border-primary bg-tutor-green-light text-primary'
                   : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
               }`}
             >
@@ -822,8 +823,8 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
         ))}
       </div>
 
-      <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-        <p className="text-sm text-blue-700">
+      <div className="mt-4 p-3 bg-tutor-green-light rounded-lg">
+        <p className="text-sm text-foreground">
           💡 Arrasta os itens para reordenar por prioridade (1 = mais importante)
         </p>
       </div>
@@ -843,7 +844,7 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
             placeholder={tq.placeholder || ''}
             value={answers[`question_${tq.id}_answer`] || ''}
             onChange={(e) => handleAnswer(tq.id, e.target.value)}
-            className="w-full border-2 border-gray-200 rounded-xl p-4 text-base focus:outline-none focus:border-green-400"
+            className="w-full border-2 border-gray-200 rounded-xl p-4 text-base focus:outline-none focus:border-primary"
           />
         </div>
       )
@@ -869,7 +870,7 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
                   onClick={() => handleAnswer(dq.id, opt.value)}
                   className={`w-full p-4 rounded-xl border-2 text-left font-medium transition-all ${
                     answers[`question_${dq.id}_answer`] === opt.value
-                      ? 'border-green-500 bg-green-50 text-green-700'
+                      ? 'border-primary bg-tutor-green-light text-primary'
                       : 'border-gray-200 bg-white hover:border-green-300'
                   }`}
                 >
@@ -894,6 +895,7 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
         onComplete={handleRegistrationComplete}
         title="Complete o seu registo"
         subtitle="Crie a sua conta para finalizar o seu perfil de explicador"
+        variant="tutor"
       />
     )
   }
@@ -903,12 +905,15 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
   const currentAnswer = answers[`question_${question.id}_answer`]
 
   return (
-    <div className="min-h-screen py-8 bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50">
-      <div className="max-w-4xl mx-auto px-4">
+    <div className="min-h-screen bg-background flex flex-col">
+
+
+      <div className="flex-1 py-8 px-4" style={{ position: 'relative', zIndex: 1 }}>
+      <div className="max-w-4xl mx-auto">
         <motion.div className="mb-8">
-          <div className="bg-white rounded-full h-3 overflow-hidden shadow-sm">
+          <div className="bg-muted rounded-full h-3 overflow-hidden shadow-sm">
             <motion.div
-              className="h-full bg-gradient-to-r from-yellow-400 to-green-400"
+              className="h-full bg-primary"
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
               transition={{ duration: 0.5 }}
@@ -927,7 +932,7 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
             exit={{ opacity: 0, x: -50 }}
             transition={{ duration: 0.3 }}
           >
-            <Card className="p-8 shadow-xl bg-white/80 backdrop-blur-sm">
+            <Card className="p-8 shadow-xl rounded-2xl border border-border/50 bg-white/80 backdrop-blur-sm">
               {renderQuestionContent(questions[currentStep])}
 
               <div className="flex justify-between mt-8">
@@ -966,6 +971,8 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
           </motion.div>
         </AnimatePresence>
       </div>
+      </div>
+      <Footer />
     </div>
   )
 }

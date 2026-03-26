@@ -2,8 +2,13 @@ import React from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from './button'
 import { useAuth } from '../../contexts/AuthContext'
-import { User, LogOut, BookOpen } from 'lucide-react'
+import { User, LogOut } from 'lucide-react'
 import { motion } from 'framer-motion'
+
+const scrollTo = (sectionIndex: number) => {
+  const el = document.querySelector(`section[data-s="${sectionIndex}"]`)
+  el?.scrollIntoView({ behavior: 'smooth' })
+}
 
 export const Navbar = () => {
   const { user, signOut } = useAuth()
@@ -15,48 +20,78 @@ export const Navbar = () => {
   }
 
   return (
-    <motion.nav 
+    <motion.nav
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      className="bg-white/80 backdrop-blur-sm border-b border-yellow-200 sticky top-0 z-50"
+      style={{ backgroundColor: 'hsl(82 30% 10%)' }}
+      className="sticky top-0 z-50"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <Link to="/" className="flex items-center space-x-2">
-            <BookOpen className="h-8 w-8 text-green-600" />
-            <span className="text-2xl font-bold bg-gradient-to-r from-yellow-600 to-green-600 bg-clip-text text-transparent">
-              Plastudo
-            </span>
+        <div className="flex justify-between items-center h-16 gap-4">
+
+          {/* Logo */}
+          <Link to="/" className="flex-shrink-0">
+            <span className="text-xl font-bold text-white tracking-tight">TuTmaid</span>
           </Link>
-          
-          <div className="flex items-center space-x-4">
+
+          {/* Section nav — hidden on mobile */}
+          <div className="hidden lg:flex items-center gap-1">
+            {[
+              { label: 'Como funciona', s: 1 },
+              { label: 'Estudantes', s: 2 },
+              { label: 'Explicadores', s: 3 },
+              { label: 'Roadmap', s: 4 },
+            ].map(({ label, s }) => (
+              <button
+                key={s}
+                onClick={() => scrollTo(s)}
+                className="px-3 py-1.5 text-sm text-white/60 hover:text-white transition-colors rounded-md hover:bg-white/10"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Right actions */}
+          <div className="flex items-center gap-2 flex-shrink-0">
             <Link to="/marketplace">
-              <Button variant="ghost" className="text-gray-600 hover:text-green-600">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-white/70 hover:text-white hover:bg-white/10 border border-white/20"
+              >
                 Explorar
               </Button>
             </Link>
-            
+
             {user ? (
-              <div className="flex items-center space-x-2">
+              <>
                 <Link to="/profile">
-                  <Button variant="ghost" size="sm" className="flex items-center space-x-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-white/70 hover:text-white hover:bg-white/10 flex items-center gap-1.5 border border-white/20"
+                  >
                     <User className="h-4 w-4" />
-                    <span>Perfil</span>
+                    Perfil
                   </Button>
                 </Link>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={handleSignOut}
-                  className="flex items-center space-x-2 text-red-600 hover:text-red-700"
+                  className="text-red-400 hover:text-red-300 hover:bg-red-500/10 flex items-center gap-1.5"
                 >
                   <LogOut className="h-4 w-4" />
-                  <span>Sair</span>
+                  Sair
                 </Button>
-              </div>
+              </>
             ) : (
               <Link to="/login">
-                <Button variant="outline" className="border-green-300 text-green-600 hover:bg-green-50">
+                <Button
+                  size="sm"
+                  className="bg-white text-[hsl(82_30%_10%)] hover:bg-white/90 font-semibold"
+                >
                   Entrar
                 </Button>
               </Link>
