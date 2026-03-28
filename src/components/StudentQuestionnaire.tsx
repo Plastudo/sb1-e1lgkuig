@@ -14,6 +14,7 @@ import { getBestTutorMatches, TutorMatch } from '../Functions/BestFitTutors'
 import { TuTmaiTLoading } from './TuTmaiTLoading'
 import { subjectsByLevelArea, SubjectData } from '../data/subjectsByLevel'
 import { useAuth } from '../contexts/AuthContext'
+import { Footer } from './Footer'
 
 //-----------------QUESTION TYPES-----------------
 type CardsQuestion = {
@@ -448,7 +449,7 @@ export const StudentQuestionnaire = () => {
         return (
           <div className="space-y-6">
             <div className="text-center mb-8">
-              {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-blue-500" />}
+              {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-accent" />}
               <h2 className="text-2xl font-bold">{question.title}</h2>
               {question.subtitle && <p className="text-gray-600 mt-2">{question.subtitle}</p>}
             </div>
@@ -459,7 +460,7 @@ export const StudentQuestionnaire = () => {
                   onClick={() => handleAnswer(question.id, option.value)}
                   className={`p-4 rounded-xl border-2 text-left flex items-center gap-3 ${
                     answers[`question_${question.id}_answer`] === option.value
-                      ? 'border-blue-500 bg-blue-50'
+                      ? 'border-accent bg-student-yellow-light'
                       : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                   }`}
                 >
@@ -479,7 +480,7 @@ export const StudentQuestionnaire = () => {
         return (
           <div className="space-y-6">
             <div className="text-center mb-8">
-              {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-purple-500" />}
+              {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-accent" />}
               <h2 className="text-2xl font-bold">{question.title}</h2>
               {question.subtitle && <p className="text-gray-600 mt-2">{question.subtitle}</p>}
             </div>
@@ -497,12 +498,12 @@ export const StudentQuestionnaire = () => {
                     }}
                     className={`p-4 rounded-lg border-2 text-left flex justify-between items-center ${
                       isSelected
-                        ? 'border-purple-500 bg-purple-50 text-purple-700'
+                        ? 'border-accent bg-student-yellow-light text-foreground'
                         : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                     }`}
                   >
                     <span>{option.label}</span>
-                    {isSelected && <Check className="w-5 h-5 text-purple-600 flex-shrink-0" />}
+                    {isSelected && <Check className="w-5 h-5 text-accent flex-shrink-0" />}
                   </button>
                 )
               })}
@@ -521,7 +522,7 @@ export const StudentQuestionnaire = () => {
         return (
           <div className="space-y-6">
             <div className="text-center mb-6">
-              {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-green-500" />}
+              {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-accent" />}
               <h2 className="text-2xl font-bold">{question.title}</h2>
               {question.subtitle && <p className="text-gray-600 mt-2">{question.subtitle}</p>}
             </div>
@@ -546,7 +547,7 @@ export const StudentQuestionnaire = () => {
                             key={slot}
                             onClick={() => handleAnswer(question.id, { ...selected, [key]: !isSelected })}
                             className={`border rounded-lg w-full text-xs py-2 px-1 transition-colors ${
-                              isSelected ? 'bg-green-500 text-white border-green-500' : 'bg-gray-100 hover:bg-gray-200 border-gray-200'
+                              isSelected ? 'bg-accent text-foreground border-accent' : 'bg-gray-100 hover:bg-gray-200 border-gray-200'
                             }`}
                           >
                             {slot}
@@ -568,7 +569,7 @@ export const StudentQuestionnaire = () => {
         return (
           <div className="space-y-6">
             <div className="text-center mb-8">
-              {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-blue-500" />}
+              {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-accent" />}
               <h2 className="text-2xl font-bold">{question.title}</h2>
               {question.subtitle && <p className="text-gray-600 mt-2">{question.subtitle}</p>}
             </div>
@@ -582,7 +583,7 @@ export const StudentQuestionnaire = () => {
                     onClick={() => handleAnswer(question.id, option.value)}
                     className={`p-4 rounded-lg border-2 text-left flex items-start gap-3 ${
                       isSelected
-                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        ? 'border-accent bg-student-yellow-light text-foreground'
                         : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                     }`}
                   >
@@ -608,7 +609,7 @@ export const StudentQuestionnaire = () => {
         return (
           <div className="space-y-6">
             <div className="text-center mb-8">
-              {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-blue-500" />}
+              {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-accent" />}
               <h2 className="text-2xl font-bold">{question.title}</h2>
               {question.subtitle && <p className="text-gray-600 mt-2">{question.subtitle}</p>}
             </div>
@@ -634,7 +635,7 @@ export const StudentQuestionnaire = () => {
                       }}
                       className={`p-3 rounded-lg border-2 text-center text-sm font-medium transition-colors ${
                         selectedLevel === opt.value
-                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          ? 'border-accent bg-student-yellow-light text-foreground'
                           : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                       }`}
                     >
@@ -662,7 +663,7 @@ export const StudentQuestionnaire = () => {
                       }}
                       className={`p-3 rounded-lg border-2 text-center text-sm font-medium transition-colors ${
                         selectedArea === area
-                          ? 'border-green-500 bg-green-50 text-green-700'
+                          ? 'border-accent bg-student-yellow-light text-foreground'
                           : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                       }`}
                     >
@@ -687,7 +688,7 @@ export const StudentQuestionnaire = () => {
         return (
           <div className="space-y-8">
             <div className="text-center mb-6">
-              {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-blue-500" />}
+              {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-accent" />}
               <h2 className="text-2xl font-bold">{question.title}</h2>
               {question.subtitle && <p className="text-gray-600 mt-2">{question.subtitle}</p>}
             </div>
@@ -705,7 +706,7 @@ export const StudentQuestionnaire = () => {
                     }}
                     className={`p-3 rounded-lg border-2 text-left text-sm transition-colors ${
                       selectedDistrict === d
-                        ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
+                        ? 'border-accent bg-student-yellow-light text-foreground font-medium'
                         : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                     }`}
                   >
@@ -728,7 +729,7 @@ export const StudentQuestionnaire = () => {
                       }}
                       className={`p-3 rounded-lg border-2 text-left text-sm transition-colors ${
                         selectedMunicipality === m
-                          ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
+                          ? 'border-accent bg-student-yellow-light text-foreground font-medium'
                           : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                       }`}
                     >
@@ -750,7 +751,7 @@ export const StudentQuestionnaire = () => {
                       onClick={() => setAnswers(prev => ({ ...prev, question_8_parish: p }))}
                       className={`p-3 rounded-lg border-2 text-left text-sm transition-colors ${
                         selectedParish === p
-                          ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
+                          ? 'border-accent bg-student-yellow-light text-foreground font-medium'
                           : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                       }`}
                     >
@@ -770,12 +771,12 @@ export const StudentQuestionnaire = () => {
         const activeCriteria = question.criteria.filter(c => !(c.questionId === 8 && isOnline))
         const activeOrder = priorityOrder.filter(id => activeCriteria.some(c => c.questionId === id))
 
-        const badgeGradient = 'from-blue-500 to-indigo-600'
+        const badgeGradient = 'from-accent to-accent/80'
 
         return (
           <div className="space-y-5">
             <div className="text-center mb-4">
-              {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-blue-500" />}
+              {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-accent" />}
               <h2 className="text-2xl font-bold">{question.title}</h2>
               {question.subtitle && <p className="text-gray-500 mt-2 text-sm">{question.subtitle}</p>}
             </div>
@@ -803,7 +804,7 @@ export const StudentQuestionnaire = () => {
                     className="rounded-2xl cursor-grab active:cursor-grabbing list-none"
                   >
                     <div className="flex items-center gap-4 px-4 py-3.5 rounded-2xl border border-gray-100 bg-white shadow-sm hover:shadow-md hover:border-gray-200 transition-all duration-200">
-                      <span className={`w-9 h-9 rounded-full bg-gradient-to-br ${badgeGradient} text-white text-sm font-bold flex items-center justify-center flex-shrink-0 shadow`}>
+                      <span className={`w-9 h-9 rounded-full bg-gradient-to-br ${badgeGradient} text-foreground text-sm font-bold flex items-center justify-center flex-shrink-0 shadow`}>
                         {index + 1}
                       </span>
                       <span className="flex-1 font-semibold text-gray-800 text-sm">{criterion.label}</span>
@@ -843,12 +844,12 @@ export const StudentQuestionnaire = () => {
               onClick={() => toggle(subject)}
               className={`p-3 rounded-lg border-2 text-left text-sm font-medium transition-colors flex justify-between items-center ${
                 isSelected
-                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  ? 'border-accent bg-student-yellow-light text-foreground'
                   : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
               }`}
             >
               <span>{subject}</span>
-              {isSelected && <Check className="w-4 h-4 text-blue-600 flex-shrink-0 ml-2" />}
+              {isSelected && <Check className="w-4 h-4 text-accent flex-shrink-0 ml-2" />}
             </button>
           )
         }
@@ -856,7 +857,7 @@ export const StudentQuestionnaire = () => {
         return (
           <div className="space-y-6">
             <div className="text-center mb-6">
-              {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-blue-500" />}
+              {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-accent" />}
               <h2 className="text-2xl font-bold">{question.title}</h2>
               {question.subtitle && <p className="text-gray-600 mt-2">{question.subtitle}</p>}
             </div>
@@ -921,7 +922,7 @@ export const StudentQuestionnaire = () => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
             >
-              <div className="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="w-20 h-20 bg-student-yellow-light text-accent rounded-full flex items-center justify-center mx-auto mb-6">
                 <Check className="w-10 h-10" />
               </div>
               <h2 className="text-3xl font-bold mb-4">Questionário Concluído!</h2>
@@ -942,7 +943,7 @@ export const StudentQuestionnaire = () => {
                           <h3 className="text-xl font-bold">{t.name}</h3>
                           <p className="text-gray-600 text-sm">{t.subjects?.join(', ')}</p>
                         </div>
-                        <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded self-start">
+                        <span className="bg-student-yellow-light text-foreground text-xs font-semibold px-2.5 py-0.5 rounded self-start">
                           Match: {t.compatibility}%
                         </span>
                         <Button
@@ -1000,7 +1001,7 @@ export const StudentQuestionnaire = () => {
         <motion.div className="mb-8">
           <div className="bg-white rounded-full h-3 overflow-hidden shadow-sm">
             <motion.div
-              className="h-full bg-gradient-to-r from-yellow-400 to-green-400"
+              className="h-full bg-accent"
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
               transition={{ duration: 0.5 }}
@@ -1045,6 +1046,7 @@ export const StudentQuestionnaire = () => {
                     }
                   }}
                   disabled={isNextDisabled()}
+                  className="bg-accent hover:bg-accent/90 text-foreground"
                 >
                   {loading ? 'A calcular matches...' : questions[currentStep].type === 'priority-ranking' ? 'Ver os meus matches' : 'Seguinte'}
                   {!loading && questions[currentStep].type !== 'priority-ranking' && <ChevronRight className="h-4 w-4" />}
@@ -1054,6 +1056,7 @@ export const StudentQuestionnaire = () => {
           </motion.div>
         </AnimatePresence>
       </div>
+      <Footer />
     </div>
   )
 }

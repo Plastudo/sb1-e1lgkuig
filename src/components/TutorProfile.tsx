@@ -341,7 +341,7 @@ export const TutorProfile = () => {
                 {/* Avatar */}
                 <div className="relative group shrink-0">
                   <img
-                    src={currentData.profile_picture || '/default-avatar.png'}
+                    src={currentData.profile_picture || '/default-avatar.svg'}
                     alt={currentData.name}
                     className={`w-24 h-24 rounded-full object-cover ring-4 ring-accent/30 shadow-lg transition-all ${isEditing ? 'group-hover:opacity-60' : ''}`}
                   />
@@ -477,6 +477,29 @@ export const TutorProfile = () => {
             </CardContent>
           </Card>
         </motion.div>
+
+        {/* ── Banner: perfil incompleto ─────────────────────────────────── */}
+        {isOwner && !tutor.profile_picture?.startsWith('data:image') && (
+          <motion.div {...fade(0.15)} className="mb-6">
+            <div className="flex items-start gap-3 p-4 rounded-xl border border-accent/40 bg-student-yellow-light/40">
+              <Camera className="w-5 h-5 text-accent shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  O teu perfil ainda não está público
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Adiciona uma foto de perfil para o teu perfil ficar visível no marketplace e os alunos te encontrarem.
+                </p>
+                <button
+                  onClick={() => { setIsEditing(true); setTimeout(() => fileInputRef.current?.click(), 100) }}
+                  className="mt-2 text-xs font-semibold text-accent underline underline-offset-2 hover:text-accent/80 transition-colors"
+                >
+                  Adicionar foto agora →
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* ── Grelha de Secções ─────────────────────────────────────────── */}
         <div className="grid md:grid-cols-2 gap-5 mb-5">

@@ -31,6 +31,8 @@ export type TutorData = {
   hourly_rate?: string;
   experience?: string;
   education?: string;
+  education_university?: string;
+  education_course?: string;
   success_rate?: string;
   total_students?: number;
   availability_summary?: string;

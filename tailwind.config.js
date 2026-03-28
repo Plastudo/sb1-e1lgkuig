@@ -57,11 +57,24 @@ export default {
           800: '#065F46',
           900: '#064E3B',
         },
+        'tutor-green': {
+          DEFAULT: 'hsl(82 25% 38%)',
+          light: 'hsl(82 30% 85%)',
+        },
+        'student-yellow': {
+          DEFAULT: 'hsl(45 70% 62%)',
+          light: 'hsl(45 50% 90%)',
+        },
+      },
+      fontFamily: {
+        sans: ['Plus Jakarta Sans', 'sans-serif'],
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',
         'slide-up': 'slideUp 0.3s ease-out',
         'bounce-subtle': 'bounceSubtle 2s infinite',
+        'float': 'float 3s ease-in-out infinite',
+        'pulse-soft': 'pulseSoft 2s ease-in-out infinite',
       },
       keyframes: {
         fadeIn: {
@@ -75,6 +88,14 @@ export default {
         bounceSubtle: {
           '0%, 100%': { transform: 'translateY(0)' },
           '50%': { transform: 'translateY(-5px)' },
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0px)' },
+          '50%': { transform: 'translateY(-12px)' },
+        },
+        pulseSoft: {
+          '0%, 100%': { opacity: '0.6' },
+          '50%': { opacity: '1' },
         },
       },
     },

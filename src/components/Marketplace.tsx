@@ -5,7 +5,7 @@ import { Card } from './ui/card'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { supabase, TutorData } from '../lib/supabase'
-import { Search, Star, Mail, MapPin, Clock } from 'lucide-react'
+import { Search, Star, Mail, MapPin, Monitor, Home, Wifi } from 'lucide-react'
 
 export const Marketplace = () => {
   const [tutors, setTutors] = useState<TutorData[]>([])
@@ -35,8 +35,12 @@ export const Marketplace = () => {
           seen.add(key)
           return true
         })
-        setTutors(unique)
-        setFilteredTutors(unique)
+        // Só mostra tutores com foto real (base64 carregada pelo utilizador)
+        const publicTutors = unique.filter(t =>
+          t.profile_picture && t.profile_picture.startsWith('data:image')
+        )
+        setTutors(publicTutors)
+        setFilteredTutors(publicTutors)
       }
     } catch (err) {
       console.error('Erro inesperado:', err)
@@ -107,7 +111,7 @@ export const Marketplace = () => {
   ]
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8">
+    <div className="min-h-screen bg-background py-8">
       <div className="max-w-7xl mx-auto px-4">
 
         {/* Header */}
@@ -116,11 +120,9 @@ export const Marketplace = () => {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-8"
         >
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl font-bold text-foreground mb-4">
             Encontre o seu{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-600 to-green-600">
-              explicador ideal
-            </span>
+            <span className="text-gradient">explicador ideal</span>
           </h1>
 
           <div className="max-w-4xl mx-auto space-y-4">
@@ -150,85 +152,107 @@ export const Marketplace = () => {
         </motion.div>
 
         {/* Tutors */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {filteredTutors.map((tutor, index) => {
             const raw = tutor.raw_answers || {}
             const displaySubjects: string[] = raw.question_5_answer || tutor.subjects || []
             const district: string = raw.question_10_answer || ''
             const municipality: string = raw.question_11_answer || ''
-            const displayLocation = tutor.location || [municipality, district].filter(Boolean).join(', ') || '—'
-            const displayHours: string = raw.question_6_answer || tutor.availability_summary || '—'
+            const displayLocation = tutor.location || [municipality, district].filter(Boolean).join(', ') || ''
+            const format: string = raw.question_9_answer || ''
+            const isOnline = format === 'online' || format === 'indiferente' || format === ''
+            const isPresencial = format === 'presencial' || format === 'centro-estudo' || format === 'indiferente' || format === ''
 
             return (
-            <motion.div
-              key={tutor.id}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-            >
-              <Card className="p-6 bg-white/80 shadow hover:shadow-lg rounded-2xl h-full flex flex-col">
-                <div className="text-center mb-4">
-                  <img
-                    src={tutor.profile_picture || '/default-avatar.png'}
-                    alt={tutor.name}
-                    className="w-20 h-20 rounded-full mx-auto mb-3 object-cover"
-                  />
+              <motion.div
+                key={tutor.id}
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05, duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+                className="group"
+              >
+                <Card className="overflow-hidden rounded-2xl border border-border/50 shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col bg-white">
 
-                  <h3 className="text-xl font-semibold">{tutor.name}</h3>
+                  {/* ── Foto ── */}
+                  <div className="relative overflow-hidden" style={{ height: 240 }}>
+                    <img
+                      src={tutor.profile_picture || '/default-avatar.svg'}
+                      alt={tutor.name}
+                      className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
+                    />
 
-                  <div className="flex justify-center items-center space-x-1">
-                    <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-                    <span className="text-sm">{tutor.rating ?? '—'}</span>
+                    {/* Gradiente suave no fundo da foto */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
+
+                    {/* Rating — canto superior direito */}
+                    <div className="absolute top-3 right-3 flex items-center gap-1 bg-primary text-primary-foreground rounded-full px-2.5 py-1 shadow-lg">
+                      <Star className="w-3 h-3 fill-accent text-accent" />
+                      <span className="text-xs font-bold">{tutor.rating ?? '—'}</span>
+                    </div>
+
+                    {/* Formato — canto inferior esquerdo */}
+                    <div className="absolute bottom-3 left-3 flex gap-1.5">
+                      {isOnline && (
+                        <div className="flex items-center gap-1 bg-white/95 text-primary rounded-full px-2 py-1 shadow text-xs font-semibold">
+                          <Wifi className="w-3 h-3" /> Online
+                        </div>
+                      )}
+                      {isPresencial && (
+                        <div className="flex items-center gap-1 bg-white/95 text-foreground rounded-full px-2 py-1 shadow text-xs font-semibold">
+                          <Home className="w-3 h-3" /> Presencial
+                        </div>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="flex justify-center gap-4 text-sm text-gray-500 mt-2">
-                    <span className="flex items-center gap-1">
-                      <MapPin className="h-4 w-4" />
-                      {displayLocation}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      {displayHours}
-                    </span>
+                  {/* ── Conteúdo ── */}
+                  <div className="p-4 flex flex-col flex-1">
+
+                    {/* Nome + localização */}
+                    <div className="mb-3">
+                      <h3 className="text-base font-bold text-foreground leading-tight">{tutor.name}</h3>
+                      {displayLocation && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                          <MapPin className="w-3 h-3 shrink-0" /> {displayLocation}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Disciplinas */}
+                    <div className="flex flex-wrap gap-1.5 mb-4">
+                      {displaySubjects.slice(0, 3).map(s => (
+                        <span key={s} className="px-2.5 py-0.5 bg-tutor-green-light text-primary rounded-full text-xs font-medium">
+                          {s}
+                        </span>
+                      ))}
+                      {displaySubjects.length > 3 && (
+                        <span className="px-2.5 py-0.5 bg-muted text-muted-foreground rounded-full text-xs font-medium">
+                          +{displaySubjects.length - 3}
+                        </span>
+                      )}
+                      {displaySubjects.length === 0 && (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </div>
+
+                    {/* Botões */}
+                    <div className="mt-auto flex gap-2">
+                      <Link to={`/profile/${tutor.id}`} className="flex-1">
+                        <Button variant="outline" size="sm" className="w-full rounded-xl text-xs border-border">
+                          Ver perfil
+                        </Button>
+                      </Link>
+                      <Button
+                        size="sm"
+                        onClick={() => handleContactTutor(tutor.email, tutor.name)}
+                        className="flex-1 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs"
+                      >
+                        <Mail className="w-3 h-3 mr-1" /> Contactar
+                      </Button>
+                    </div>
                   </div>
-                </div>
-
-                {displaySubjects.length > 0 && (
-                  <div className="flex flex-wrap gap-1 justify-center mb-3">
-                    {displaySubjects.slice(0, 3).map(s => (
-                      <span key={s} className="px-2 py-0.5 bg-green-50 text-green-700 rounded-full text-xs font-medium">
-                        {s}
-                      </span>
-                    ))}
-                    {displaySubjects.length > 3 && (
-                      <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full text-xs">
-                        +{displaySubjects.length - 3}
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                <p className="text-sm text-gray-600 line-clamp-3 mb-4">
-                  {tutor.bio || 'Sem apresentação ainda.'}
-                </p>
-
-                <div className="mt-auto space-y-2">
-                  <Link to={`/profile/${tutor.id}`}>
-                    <Button variant="outline" className="w-full">
-                      Ver perfil completo
-                    </Button>
-                  </Link>
-
-                  <Button
-                    onClick={() => handleContactTutor(tutor.email, tutor.name)}
-                    className="w-full bg-gradient-to-r from-green-500 to-blue-500"
-                  >
-                    <Mail className="h-4 w-4 mr-2" />
-                    Contactar
-                  </Button>
-                </div>
-              </Card>
-            </motion.div>
+                </Card>
+              </motion.div>
             )
           })}
         </div>

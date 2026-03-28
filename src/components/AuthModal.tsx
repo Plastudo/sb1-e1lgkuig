@@ -1,6 +1,6 @@
 //-----------RESUMO----------------------------
-//Este código define um componente React chamado AuthModal, que mostra um formulário de autenticação (login ou registo). 
-//Ele permite que o utilizador crie uma conta nova ou entre numa já existente, usando o email e a palavra-passe. 
+//Este código define um componente React chamado AuthModal, que mostra um formulário de autenticação (login ou registo).
+//Ele permite que o utilizador crie uma conta nova ou entre numa já existente, usando o email e a palavra-passe.
 //O código também lida com validação, erros, animações visuais e integração com a base de dados (Supabase).
 
 //--------- FLUXO DO CÒDIGO --------------------
@@ -9,7 +9,7 @@
 //Guarda estados como modo atual (login/registo), dados dos campos, visibilidade da palavra-passe, erros e carregamento.
 //A função handleSubmit verifica a configuração do Supabase, tenta registar ou autenticar o utilizador e chama onComplete se for bem-sucedido.
 //Mostra uma interface animada com campos de nome, email e palavra-passe, botão de envio com feedback visual e mensagens de erro.
-//Inclui ainda um botão para alternar entre os modos de “Criar conta” e “Iniciar sessão”.
+//Inclui ainda um botão para alternar entre os modos de "Criar conta" e "Iniciar sessão".
 
 //---------CODE----------------
 import React, { useState } from 'react'  // Importa o React e o hook useState
@@ -31,6 +31,19 @@ interface AuthModalProps {
 }
 
 export const AuthModal = ({ onComplete, title, subtitle, role = 'tutor', modal = false }: AuthModalProps) => {
+  const isStudent = role === 'student'
+  const isTutor   = role === 'tutor'
+
+  const btnClass   = isStudent
+    ? 'w-full bg-accent hover:bg-accent/90 text-foreground font-semibold'
+    : 'w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold'
+  const linkClass  = isStudent ? 'text-accent hover:text-accent/80' : 'text-primary hover:text-primary/80'
+  const badgeClass = isStudent
+    ? 'inline-block px-3 py-1 rounded-full bg-student-yellow-light text-foreground text-xs font-semibold mb-3'
+    : isTutor
+      ? 'inline-block px-3 py-1 rounded-full bg-tutor-green-light text-primary text-xs font-semibold mb-3'
+      : ''
+
   const [isSignUp, setIsSignUp] = useState(true)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -41,7 +54,7 @@ export const AuthModal = ({ onComplete, title, subtitle, role = 'tutor', modal =
 
   const { signUp, signIn } = useAuth()
 
- const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 
 const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault()
@@ -86,22 +99,24 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   const cardContent = (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.2 }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
       className={modal ? 'w-full' : 'w-full max-w-md px-4'}
     >
-      <Card className="p-8 shadow-xl border-0 bg-white rounded-2xl">
+      <Card className="p-8 shadow-xl rounded-2xl border border-border/50 bg-white/90 backdrop-blur-sm">
           {/* Caixa visual com fundo branco e sombra */}
           <div className="text-center mb-6">
-            {/* Cabeçalho com título e subtítulo */}
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            {badgeClass && (
+              <span className={badgeClass}>
+                {isTutor ? 'Explicador' : 'Estudante'}
+              </span>
+            )}
+            <h2 className="text-2xl font-bold text-foreground mb-2">
               {title || (isSignUp ? 'Criar conta' : 'Iniciar sessão')}
-              {/* Mostra título personalizado ou padrão */}
             </h2>
-            <p className="text-gray-600">
+            <p className="text-muted-foreground text-sm">
               {subtitle || (isSignUp ? 'Complete o seu registo para continuar' : 'Entre na sua conta')}
-              {/* Mostra subtítulo conforme o modo */}
             </p>
           </div>
 
@@ -189,7 +204,7 @@ const handleSubmit = async (e: React.FormEvent) => {
 
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
+              className={btnClass}
               disabled={loading}
             >
               {loading ? (
@@ -215,7 +230,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                 setIsSignUp(!isSignUp)
                 setError('')
               }}
-              className="text-green-600 hover:text-green-700"
+              className={linkClass}
             >
               {isSignUp ? 'Iniciar sessão' : 'Criar conta'}
               {/* Botão que muda o modo */}
@@ -228,7 +243,7 @@ const handleSubmit = async (e: React.FormEvent) => {
   if (modal) return cardContent
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8 flex items-center justify-center">
+    <div className="min-h-screen bg-background py-8 flex items-center justify-center">
       {cardContent}
     </div>
   )
