@@ -31,7 +31,7 @@ export const Navbar = () => {
 
           {/* Logo */}
           <Link to="/" className="flex-shrink-0">
-            <span className="text-xl font-bold text-white tracking-tight">TuTmaid</span>
+            <span className="text-xl font-bold text-white tracking-tight">TuTmait</span>
           </Link>
 
           {/* Section nav — hidden on mobile */}

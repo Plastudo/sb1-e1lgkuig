@@ -56,7 +56,7 @@ const TUTOR_BENEFITS = [
 ]
 
 const ROADMAP = [
-  { icon: MessageCircle, title: 'Chat integrado',         desc: 'Fala directamente com o teu explicador dentro da plataforma, sem sair do TuTmaid.',                              status: 'Brevemente' },
+  { icon: MessageCircle, title: 'Chat integrado',         desc: 'Fala directamente com o teu explicador dentro da plataforma, sem sair do TuTmait.',                              status: 'Brevemente' },
   { icon: CreditCard,    title: 'Pagamentos no chat',     desc: 'Paga as tuas sessões de forma segura directamente no chat — sem transferências nem dinheiro.',                   status: 'A seguir' },
   { icon: Calendar,      title: 'Agendamento automático', desc: 'Marca sessões com um clique, com sincronização automática de disponibilidade em tempo real.',                    status: 'Em desenvolvimento' },
   { icon: FileText,      title: 'Conteúdo próprio',       desc: 'Fichas, resumos e exercícios criados pelos explicadores, disponíveis directamente na plataforma.',              status: 'No roadmap' },
@@ -188,7 +188,7 @@ export const HomePage = () => {
                     className="text-5xl sm:text-6xl font-extrabold leading-tight tracking-tight text-foreground"
                   >
                     Encontra o teu{' '}
-                    <span className="text-gradient">TuTmaid</span>
+                    <span className="text-gradient">TuTmait</span>
                   </motion.h1>
 
                   <motion.p
@@ -219,7 +219,7 @@ export const HomePage = () => {
                     style={{ background: 'radial-gradient(circle, hsl(82 25% 38% / 0.22), transparent 70%)', top: '8%', left: '4%', filter: 'blur(44px)' }} />
                   <div className="absolute w-56 h-56 rounded-full animate-pulse-soft"
                     style={{ background: 'radial-gradient(circle, hsl(45 70% 62% / 0.25), transparent 70%)', bottom: '5%', right: '4%', filter: 'blur(44px)', animationDelay: '1s' }} />
-                  <img src={heroIllustration} alt="Estudante com explicador na TuTmaid"
+                  <img src={heroIllustration} alt="Estudante com explicador na TuTmait"
                     className="relative z-10 w-full max-w-lg"
                     style={{ mixBlendMode: 'multiply' }}
                   />
@@ -310,7 +310,7 @@ export const HomePage = () => {
                   className="relative flex items-center justify-center"
                   style={{ mixBlendMode: 'multiply', background: 'white' }}
                 >
-                  <img src={criancaSentada} alt="Estudante a estudar com apoio escolar da TuTmaid"
+                  <img src={criancaSentada} alt="Estudante a estudar com apoio escolar da TuTmait"
                     className="w-full max-w-md"
                   />
                 </motion.div>
@@ -330,7 +330,7 @@ export const HomePage = () => {
                   className="relative flex items-center justify-center order-2 lg:order-1"
                   style={{ mixBlendMode: 'multiply', background: 'white' }}
                 >
-                  <img src={tutorTeaching} alt="Explicador a dar aulas particulares — TuTmaid"
+                  <img src={tutorTeaching} alt="Explicador a dar aulas particulares — TuTmait"
                     className="w-full max-w-sm"
                   />
                 </motion.div>
@@ -385,7 +385,7 @@ export const HomePage = () => {
                   O que vem a seguir
                 </span>
                 <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground mb-3">
-                  O futuro do <span className="text-gradient">TuTmaid</span>
+                  O futuro do <span className="text-gradient">TuTmait</span>
                 </h2>
                 <p className="text-base text-muted-foreground max-w-lg mx-auto">
                   Estamos a construir uma plataforma completa. Aqui está o que está a chegar.

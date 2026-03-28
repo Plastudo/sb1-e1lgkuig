@@ -12,7 +12,7 @@ export const Footer = () => {
 
           {/* Brand */}
           <div className="md:col-span-2 space-y-4">
-            <span className="text-2xl font-bold">TuTmaid</span>
+            <span className="text-2xl font-bold">TuTmait</span>
             <p className="text-white/50 text-sm leading-relaxed max-w-xs">
               A plataforma que conecta estudantes com os melhores explicadores de Portugal.
               Explicações, aulas particulares e apoio escolar — presencial ou online.
@@ -72,7 +72,7 @@ export const Footer = () => {
 
         {/* Bottom bar */}
         <div className="border-t border-white/10 pt-6 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-white/30">
-          <span>© {year} TuTmaid. Todos os direitos reservados.</span>
+          <span>© {year} TuTmait. Todos os direitos reservados.</span>
           <span>Feito em Portugal 🇵🇹</span>
         </div>
       </div>
