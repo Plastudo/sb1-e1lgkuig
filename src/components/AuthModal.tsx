@@ -26,9 +26,11 @@ interface AuthModalProps {
   onComplete: (userId: string) => void
   title?: string
   subtitle?: string
+  role?: 'student' | 'tutor'
+  modal?: boolean
 }
 
-export const AuthModal = ({ onComplete, title, subtitle }: AuthModalProps) => {
+export const AuthModal = ({ onComplete, title, subtitle, role = 'tutor', modal = false }: AuthModalProps) => {
   const [isSignUp, setIsSignUp] = useState(true)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -54,18 +56,18 @@ const handleSubmit = async (e: React.FormEvent) => {
       const user = result.data?.user
 
       if (user) {
-        const { error: insertError } = await supabase.from('tutores').insert({
-          user_id: user.id,
-          name,
-          email,
-          question_1_answer: ''
-        })
-        if (insertError) throw insertError
-        
+        if (role === 'tutor') {
+          const { error: insertError } = await supabase.from('tutores').insert({
+            user_id: user.id,
+            name,
+            email,
+            question_1_answer: ''
+          })
+          if (insertError) throw insertError
+        }
         // Em vez de onComplete, alternar para Login
         setIsSignUp(false)
         setError('')
-        // Opcional: mostrar uma mgs de sucesso ou apenas trocar o ecrã.
         alert('Conta criada com sucesso! Por favor inicie sessão.')
       }
     } else {
@@ -83,15 +85,14 @@ const handleSubmit = async (e: React.FormEvent) => {
   }
 }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8 flex items-center justify-center">
-      {/* Fundo com gradiente e centralização */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-md px-4"
-      >
-        <Card className="p-8 shadow-xl border-0 bg-white/90 backdrop-blur-sm">
+  const cardContent = (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.2 }}
+      className={modal ? 'w-full' : 'w-full max-w-md px-4'}
+    >
+      <Card className="p-8 shadow-xl border-0 bg-white rounded-2xl">
           {/* Caixa visual com fundo branco e sombra */}
           <div className="text-center mb-6">
             {/* Cabeçalho com título e subtítulo */}
@@ -223,6 +224,13 @@ const handleSubmit = async (e: React.FormEvent) => {
           </div>
         </Card>
       </motion.div>
+  )
+
+  if (modal) return cardContent
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 py-8 flex items-center justify-center">
+      {cardContent}
     </div>
   )
 }

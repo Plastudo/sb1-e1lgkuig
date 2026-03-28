@@ -27,6 +27,26 @@ function normalizeString(input?: string | null) {
     .toLowerCase();
 }
 
+/**
+ * Compara duas grelhas de disponibilidade {slot: boolean}
+ * Devolve fração dos slots desejados pelo estudante cobertos pelo tutor (0–1)
+ */
+function compareAvailability(sRaw: any, tRaw: any): number {
+  if (!sRaw || !tRaw || typeof sRaw !== "object" || typeof tRaw !== "object") return 0;
+  const studentSlots = Object.keys(sRaw).filter((k) => sRaw[k] === true);
+  if (studentSlots.length === 0) return 0;
+  const tutorSlots = new Set(Object.keys(tRaw).filter((k) => tRaw[k] === true));
+  const overlap = studentSlots.filter((s) => tutorSlots.has(s)).length;
+  return overlap / studentSlots.length;
+}
+
+/**
+ * Devolve true se o valor for um objeto simples (não array, não null)
+ */
+function isPlainObject(v: any): boolean {
+  return v !== null && typeof v === "object" && !Array.isArray(v);
+}
+
 export async function getBestTutorMatches(
   studentAnswers: Record<string, any>
 ): Promise<TutorMatch[]> {
@@ -107,7 +127,19 @@ export async function getBestTutorMatches(
 
     for (const idx of questionIndexes) {
       const sRaw = studentAnswers[`question_${idx}_answer`];
-      const tRaw = tutor[`question_${idx}_answer`];
+      const key = `question_${idx}_answer`;
+      const tRaw = tutor[key] ?? tutor?.raw_answers?.[key];
+
+      const w = getWeight(idx);
+
+      // Grelha de disponibilidade: comparação por slots
+      if (isPlainObject(sRaw) && isPlainObject(tRaw)) {
+        total += compareAvailability(sRaw, tRaw) * w * 100;
+        continue;
+      }
+
+      // Qualquer lado é objeto mas o outro não → ignorar
+      if (isPlainObject(sRaw) || isPlainObject(tRaw)) continue;
 
       const sValues = Array.isArray(sRaw)
         ? sRaw.map(normalizeString)
@@ -134,11 +166,6 @@ export async function getBestTutorMatches(
       }
 
       const perQuestionCompatibility = matches / studentItems.length;
-
-      // Peso normalizado da pergunta
-      const w = getWeight(idx);
-
-      // Pontuação final ponderada
       total += perQuestionCompatibility * w * 100;
     }
 

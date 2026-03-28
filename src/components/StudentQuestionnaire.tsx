@@ -1,15 +1,21 @@
 //-----------------STUDENT QUESTIONNAIRE-----------------
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, Reorder } from 'framer-motion'
 import { Button } from './ui/button'
 import { Card } from './ui/card'
 import { supabase } from '../lib/supabase'
-import { ChevronRight, ChevronLeft, Check, BookOpen, GraduationCap, User, Building, Gamepad, Calendar, Monitor, Home, Target, MapPin, GripVertical } from 'lucide-react'
+import { ChevronRight, ChevronLeft, Check, Mail, GripVertical, ChevronDown } from 'lucide-react'
+import { AuthModal } from './AuthModal'
+import { BookOpen, User, Building, Gamepad, Target, GraduationCap, MapPin } from 'lucide-react'
+import { Calendar, Monitor, Home } from 'lucide-react'
 import { getDistritos, getMunicipiosByDistrito, getFreguesiasByMunicipio } from '../data/locationMap'
 import { getBestTutorMatches, TutorMatch } from '../Functions/BestFitTutors'
+import { TuTmaiTLoading } from './TuTmaiTLoading'
+import { subjectsByLevelArea, SubjectData } from '../data/subjectsByLevel'
+import { useAuth } from '../contexts/AuthContext'
 
-// -----------------QUESTION TYPES-----------------
+//-----------------QUESTION TYPES-----------------
 type CardsQuestion = {
   id: number
   type: 'cards'
@@ -17,33 +23,7 @@ type CardsQuestion = {
   subtitle?: string
   tooltip?: string
   icon?: any
-  options: {
-    value: string
-    label: string
-    icon?: any
-  }[]
-}
-
-type CardsWithOtherQuestion = {
-  id: number
-  type: 'cards-with-other'
-  title: string
-  subtitle?: string
-  tooltip?: string
-  icon?: any
-  options: {
-    value: string
-    label: string
-  }[]
-}
-
-type YesNoWithExtraQuestion = {
-  id: number
-  type: 'yes-no-with-extra'
-  title: string
-  subtitle?: string
-  tooltip?: string
-  extraLabel: string
+  options: { value: string; label: string; icon?: any }[]
 }
 
 type CardsMultipleQuestion = {
@@ -53,10 +33,7 @@ type CardsMultipleQuestion = {
   subtitle?: string
   tooltip?: string
   icon?: any
-  options: {
-    value: string
-    label: string
-  }[]
+  options: { value: string; label: string }[]
 }
 
 type AvailabilityGridQuestion = {
@@ -64,7 +41,6 @@ type AvailabilityGridQuestion = {
   type: 'availability-grid'
   title: string
   subtitle?: string
-  tooltip?: string
   icon?: any
 }
 
@@ -73,45 +49,53 @@ type SingleChoiceCardsQuestion = {
   type: 'single-choice-cards'
   title: string
   subtitle?: string
-  tooltip?: string
   icon?: any
-  options: {
-    value: string
-    label: string
-    description?: string
-    icon?: any
-  }[]
+  options: { value: string; label: string; description?: string; icon?: any }[]
 }
 
-type ConditionalQuestion = {
+type LevelYearQuestion = {
   id: number
-  type: 'conditional'
-  dependsOn: number
-  conditions: {
-    value: string
-    question: Question
-  }[]
-}
-
-type PriorityListQuestion = {
-  id: number
-  type: 'priority-list'
+  type: 'level-year'
   title: string
   subtitle?: string
-  tooltip?: string
   icon?: any
-  options: { value: string; label: string }[]
+  levelOptions: { value: string; label: string }[]
+}
+
+type LocationScreenQuestion = {
+  id: number
+  type: 'location-screen'
+  title: string
+  subtitle?: string
+  icon?: any
+}
+
+type PriorityRankingQuestion = {
+  id: number
+  type: 'priority-ranking'
+  title: string
+  subtitle?: string
+  icon?: any
+  criteria: { questionId: number; label: string }[]
+}
+
+type SubjectPickerQuestion = {
+  id: number
+  type: 'subject-picker'
+  title: string
+  subtitle?: string
+  icon?: any
 }
 
 type Question =
   | CardsQuestion
-  | CardsWithOtherQuestion
-  | YesNoWithExtraQuestion
   | CardsMultipleQuestion
   | AvailabilityGridQuestion
   | SingleChoiceCardsQuestion
-  | ConditionalQuestion
-  | PriorityListQuestion
+  | LevelYearQuestion
+  | LocationScreenQuestion
+  | PriorityRankingQuestion
+  | SubjectPickerQuestion
 
 //-----------------SUPABASE DEBUG HELPERS-----------------
 const logSupabase = (step: string, payload: any) => {
@@ -121,264 +105,210 @@ const logSupabase = (step: string, payload: any) => {
   console.groupEnd()
 }
 
-//-----------------ARRAY DE PERGUNTAS (ESTUDANTES)-----------------
+//-----------------ÁREAS POR NÍVEL DE ENSINO-----------------
+const areasByLevel: Record<string, string[]> = {
+  '1º Ciclo':    [],
+  '2º Ciclo':    [],
+  '3º Ciclo':    [],
+  'Secundário':  ['Ciências e Tecnologias', 'Ciências Socioeconómicas', 'Línguas e Humanidades', 'Artes Visuais'],
+  'Superior':    ['Engenharia e Tecnologia', 'Medicina e Ciências da Saúde', 'Direito', 'Economia e Gestão', 'Humanidades e Línguas', 'Psicologia & Ciências Sociais', 'Educação e Formação', 'Artes, Design e Arquitectura', 'Agronomia, Ambiente e Veterinária', 'Ciências'],
+  'Profissional': [],
+}
+
+//-----------------ARRAY DE PERGUNTAS (ESTUDANTE)-----------------
 const questions: Question[] = [
-  // Equivalent to Q1
-  { 
+  // Q1
+  {
     id: 1,
     type: 'cards',
-    title: 'Como preferes ter as explicações?',
+    title: 'Como preferes receber as explicações?',
     options: [
       { value: 'individual', label: 'Individual', icon: User },
-      { value: 'grupo', label: 'Centro de estudos / grupo', icon: Building }
+      { value: 'grupo',      label: 'Grupo',      icon: Building },
     ]
   },
-  // Equivalent to Q2
+  // Q2
   {
     id: 2,
-    type: 'cards',
-    title: 'Qual a fase escolar?',
+    type: 'level-year',
+    title: 'Nível de ensino',
+    subtitle: 'Seleciona o teu nível e, se aplicável, a área de ensino',
     icon: GraduationCap,
-    options: [
-      { value: 'Ensino Básico', label: 'Ensino Básico' },
-      { value: 'Ensino Secundário', label: 'Ensino Secundário' },
-      { value: 'Ensino Superior', label: 'Ensino Superior' },
-      { value: 'Cursos profissionais', label: 'Cursos profissionais' },
-      { value: 'Outros', label: 'Outros' }
+    levelOptions: [
+      { value: '1º Ciclo',      label: '1º Ciclo' },
+      { value: '2º Ciclo',      label: '2º Ciclo' },
+      { value: '3º Ciclo',      label: '3º Ciclo' },
+      { value: 'Secundário',    label: 'Secundário' },
+      { value: 'Superior',      label: 'Superior' },
+      { value: 'Profissional',  label: 'Profissional' },
     ]
   },
-  // Equivalent "Qual o ciclo" (Conditional for Ensino Básico)
+  // Q3
   {
     id: 3,
-    type: 'conditional',
-    dependsOn: 2,
-    conditions: [
-      {
-        value: 'Ensino Básico',
-        question: {
-          id: 3,
-          type: 'cards',
-          title: 'Qual o ciclo?',
-          icon: GraduationCap,
-          options: [
-            { value: '1º ciclo', label: '1º ciclo' },
-            { value: '2º ciclo', label: '2º ciclo' },
-            { value: '3º ciclo', label: '3º ciclo' }
-          ]
-        }
-      },
-      // Bypass fallback
-      {
-        value: '',
-        question: {
-          id: 3,
-          type: 'cards',
-          title: 'Avançar (Não aplicável)',
-          options: [{ value: 'n/a', label: 'Prosseguir' }]
-        }
-      }
+    type: 'subject-picker',
+    title: 'Disciplinas',
+    subtitle: 'Que disciplinas procuras? (podes escolher várias)',
+    icon: BookOpen,
+  },
+  // Q4
+  {
+    id: 4,
+    type: 'cards',
+    title: 'Quantas sessões por semana precisas?',
+    options: [
+      { value: '1', label: '1 sessão' },
+      { value: '2', label: '2 sessões' },
+      { value: '3', label: '3 sessões' },
+      { value: '4', label: '4 sessões' },
+      { value: '5+', label: '5 ou mais sessões' },
     ]
   },
-  // Equivalent to Q4 & Q5 combination
+  // Q5
   {
     id: 5,
-    type: 'cards-multiple',
-    title: 'Que disciplinas procuras?',
-    subtitle: 'Podes escolher várias',
-    icon: BookOpen,
+    type: 'cards',
+    title: 'Qual é o teu orçamento por hora?',
+    subtitle: 'Valor indicativo (podes alterar mais tarde)',
     options: [
-      { value: 'Português', label: 'Português' },
-      { value: 'Matemática', label: 'Matemática' },
-      { value: 'Física', label: 'Física' },
-      { value: 'Química', label: 'Química' },
-      { value: 'Biologia', label: 'Biologia' },
-      { value: 'História', label: 'História' },
-      { value: 'Geografia', label: 'Geografia' },
-      { value: 'Inglês', label: 'Inglês' },
-      { value: 'Francês', label: 'Francês' },
-      { value: 'Espanhol', label: 'Espanhol' },
-      { value: 'Economia', label: 'Economia' },
-      { value: 'Informática', label: 'Informática' },
-      { value: 'Outras', label: 'Outras' }
+      { value: '10-15', label: '10€ – 15€ / hora' },
+      { value: '15-25', label: '15€ – 25€ / hora' },
+      { value: '25-35', label: '25€ – 35€ / hora' },
+      { value: '35-45', label: '35€ – 45€ / hora' },
+      { value: '45+',   label: 'Mais de 45€ / hora' },
     ]
   },
-  // Equivalent to Q6
+  // Q6
   {
     id: 6,
-    type: 'cards',
-    title: 'Quantas horas por semana precisas?',
-    tooltip: "Caso tenhas escolhido diversas disciplinas, deves colocar o total de horas da soma de todas as disciplinas",
-    options: [
-      { value: '1-5', label: '1 a 5 horas' },
-      { value: '6-10', label: '6 a 10 horas' },
-      { value: '11-20', label: '11 a 20 horas' },
-      { value: '21-30', label: '21 a 30 horas' },
-      { value: '30+', label: 'Mais de 30 horas' }
-    ]
-  },
-  // Equivalent to Q7
-  {
-    id: 7,
-    type: 'cards',
-    title: 'Qual é o teu orçamento por hora indicativo?',
-    options: [
-      { value: '5-10', label: '5€ – 10€ / hora' },
-      { value: '10-15', label: '10€ – 15€ / hora' },
-      { value: '15-20', label: '15€ – 20€ / hora' },
-      { value: '20-30', label: '20€ – 30€ / hora' },
-      { value: '30+', label: 'Mais de 30€ / hora' }
-    ]
-  },
-  // Equivalent to Q8
-  {
-    id: 8,
     type: 'availability-grid',
     title: 'Disponibilidade',
-    subtitle: 'Qual a tua disponibilidade para ter explicações?',
-    icon: Calendar
+    subtitle: 'Seleciona os períodos em que podes ter explicações',
+    icon: Calendar,
   },
-  // Equivalent to Q9
+  // Q7
   {
-    id: 9,
+    id: 7,
     type: 'single-choice-cards',
-    title: 'Tipo de Explicação',
+    title: 'Tipo de explicação',
     subtitle: 'Onde preferes ter as aulas?',
     icon: Monitor,
     options: [
-      { value: 'presencial', label: 'Presencial', description: 'O explicador vai à tua casa ou local combinado', icon: Home },
-      { value: 'centro-estudo', label: 'Centro de Estudo', description: 'Numa instalação dedicada', icon: Building },
-      { value: 'online', label: 'Online', description: 'Sessões virtuais por videochamada', icon: Monitor },
-      { value: 'indiferente', label: 'Indiferente', description: 'Qualquer formato serve', icon: Target }
+      { value: 'presencial',     label: 'Presencial',       description: 'O explicador vai ao teu local ou local combinado', icon: Home },
+      { value: 'centro-estudo',  label: 'Centro de Estudo', description: 'Numa instalação dedicada ao estudo',               icon: Building },
+      { value: 'online',         label: 'Online',           description: 'Sessões virtuais por videochamada',                icon: Monitor },
     ]
   },
-  // Equivalent conditional Q10
+  // Q8 — visível apenas se Q7 ≠ online
+  {
+    id: 8,
+    type: 'location-screen',
+    title: 'Localização',
+    subtitle: 'Indica onde te encontras para encontrarmos explicadores perto de ti',
+    icon: MapPin,
+  },
+  // Q9
+  {
+    id: 9,
+    type: 'single-choice-cards',
+    title: 'Qual é o teu objectivo?',
+    icon: Target,
+    options: [
+      { value: 'explorar',     label: 'Quero explorar este tema',             description: 'Estou a começar e quero construir uma base sólida de conhecimento.' },
+      { value: 'duvidas',      label: 'Tenho dúvidas pontuais',               description: 'Já tenho algum conhecimento, mas quero esclarecer conceitos específicos.' },
+      { value: 'recuperar',    label: 'Quero recuperar e consolidar',         description: 'Estou a ter dificuldades e quero identificar lacunas para melhorar os meus resultados.' },
+      { value: 'progredir',    label: 'Quero progredir e aprofundar',         description: 'Estou num bom caminho e quero continuar a evoluir.' },
+      { value: 'avancado',     label: 'Quero atingir um nível avançado',      description: 'Domino o essencial e quero aperfeiçoar ao máximo o meu desempenho.' },
+      { value: 'avaliacoes',   label: 'Quero preparar-me para avaliações',    description: 'O meu foco é consolidar e rever os conteúdos para os exames.' },
+    ]
+  },
+  // Q10
   {
     id: 10,
-    type: 'conditional',
-    dependsOn: 9,
-    conditions: [
-      {
-        value: 'presencial',
-        question: {
-          id: 10,
-          type: 'cards',
-          title: 'Distrito',
-          icon: MapPin,
-          options: getDistritos().map(d => ({ value: d, label: d }))
-        }
-      },
-      {
-        value: 'online',
-        question: {
-          id: 102,
-          type: 'cards',
-          title: 'Plataforma preferida',
-          icon: Monitor,
-          options: [
-            'Zoom', 'Google Meet', 'Microsoft Teams', 'Skype', 'Discord', 'Sem preferência'
-          ].map(p => ({ value: p, label: p }))
-        }
-      },
-      {
-        value: 'centro-estudo',
-        question: {
-          id: 103,
-          type: 'cards-with-other',
-          title: 'Centro de Estudo',
-          subtitle: 'Tens preferência por alguma zona?',
-          icon: Building,
-          options: [{ value: 'Outro', label: 'Especificar' }]
-        }
-      }
+    type: 'cards-multiple',
+    title: 'Abordagem de ensino',
+    subtitle: 'Que tipo de abordagem preferes? (podes escolher várias)',
+    icon: Target,
+    options: [
+      { value: 'Explicações práticas',  label: 'Explicações práticas' },
+      { value: 'Material visual',       label: 'Material visual' },
+      { value: 'Aulas teóricas',        label: 'Aulas teóricas' },
+      { value: 'Exercícios guiados',    label: 'Exercícios guiados' },
+      { value: 'Aulas interativas',     label: 'Aulas interativas' },
     ]
   },
-  
-  // Equivalent conditional Q11 (Município if presencial)
+  // Q11
   {
     id: 11,
-    type: 'conditional',
-    dependsOn: 10,
-    conditions: [
-      {
-        value: '',
-        question: {
-          id: 11,
-          type: 'cards',
-          title: 'Município',
-          icon: MapPin,
-          options: []
-        }
-      }
-    ]
-  },
-
-  // Equivalent conditional Q12 (Freguesia if presencial)
-  {
-    id: 12,
-    type: 'conditional',
-    dependsOn: 11,
-    conditions: [
-      {
-        value: '',
-        question: {
-          id: 12,
-          type: 'cards',
-          title: 'Freguesia',
-          icon: MapPin,
-          options: []
-        }
-      }
-    ]
-  },
-  
-  // Equivalent to Q15
-  {
-    id: 15,
-    type: 'cards-multiple',
-    title: 'Abordagem de Ensino',
-    subtitle: 'Que método de ensino preferes?',
-    icon: Target,
-    options: [
-      { value: 'Explicações práticas', label: 'Explicações práticas' },
-      { value: 'Uso de material visual', label: 'Uso de material visual' },
-      { value: 'Aulas expositivas', label: 'Aulas expositivas' },
-      { value: 'Exercícios guiados', label: 'Exercícios guiados' },
-      { value: 'Aulas interativas', label: 'Aulas interativas' },
-      { value: 'Preparação intensiva para exames', label: 'Preparação intensiva para exames' }
-    ]
-  },
-  // Equivalent to Q16
-  {
-    id: 16,
     type: 'cards-multiple',
     title: 'Hobbies',
-    subtitle: 'Quais são os teus interesses/hobbies?',
+    subtitle: 'Quais são as tuas áreas de interesse? (podes escolher várias)',
     icon: Gamepad,
     options: [
-      { value: 'Jogos', label: 'Jogos' },
+      { value: 'Jogos',    label: 'Jogos' },
       { value: 'Desporto', label: 'Desporto' },
-      { value: 'Música', label: 'Música' },
-      { value: 'Leitura', label: 'Leitura' },
-      { value: 'Cinema', label: 'Cinema' },
-      { value: 'Outros', label: 'Outros' }
+      { value: 'Música',   label: 'Música' },
+      { value: 'Leitura',  label: 'Leitura' },
+      { value: 'Cinema',   label: 'Cinema' },
+      { value: 'Outros',   label: 'Outros' },
     ]
   },
-  // Equivalent to Q17
+  // Q12
   {
-    id: 17,
-    type: 'priority-list',
-    title: 'Prioridades',
-    subtitle: 'Ordena os fatores por importância para ti:',
-    icon: Target,
+    id: 12,
+    type: 'cards',
+    title: 'Perfil do aluno',
+    subtitle: 'Tens alguma condição relevante para o explicador conhecer?',
+    icon: User,
     options: [
-      { value: 'Qualidade do material', label: 'Qualidade do material' },
-      { value: 'Experiência do explicador', label: 'Experiência do explicador' },
-      { value: 'Flexibilidade de horário', label: 'Flexibilidade de horário' },
-      { value: 'Preço', label: 'Preço' },
-      { value: 'Método de ensino', label: 'Método de ensino' }
+      { value: 'nenhuma',           label: 'Não' },
+      { value: 'dificuldades',      label: 'Dificuldades de Aprendizagem' },
+      { value: 'deficiencia',       label: 'Aprendizagem condicionada por deficiência' },
     ]
-  }
+  },
+  // Q13
+  {
+    id: 13,
+    type: 'priority-ranking',
+    title: 'O que é mais importante para ti?',
+    subtitle: 'Ordena os critérios por ordem de importância — o primeiro é o que mais pesa na compatibilidade',
+    icon: Target,
+    criteria: [
+      { questionId: 3,  label: 'Matéria — que disciplina preciso de apoio' },
+      { questionId: 4,  label: 'Frequência — quantas sessões por semana' },
+      { questionId: 5,  label: 'Preço — qual o orçamento disponível' },
+      { questionId: 6,  label: 'Horário — quando estou disponível' },
+      { questionId: 8,  label: 'Localização — onde quero as aulas' },
+      { questionId: 9,  label: 'Objetivo — o que quero alcançar' },
+      { questionId: 10, label: 'Método — como prefiro aprender' },
+      { questionId: 11, label: 'Interesses — hobbies em comum com o explicador' },
+    ]
+  },
 ]
+
+//-----------------HELPERS DE NAVEGAÇÃO COM SKIP-----------------
+function getSkippedIndexes(currentAnswers: Record<string, any>): Set<number> {
+  const q7 = currentAnswers['question_7_answer']
+  const skipped = new Set<number>()
+  questions.forEach((q, idx) => {
+    if (q.id === 8 && q7 === 'online') skipped.add(idx)
+  })
+  return skipped
+}
+
+function getNextStep(from: number, currentAnswers: Record<string, any>): number {
+  const skipped = getSkippedIndexes(currentAnswers)
+  let next = from + 1
+  while (next < questions.length && skipped.has(next)) next++
+  return next
+}
+
+function getPrevStep(from: number, currentAnswers: Record<string, any>): number {
+  const skipped = getSkippedIndexes(currentAnswers)
+  let prev = from - 1
+  while (prev >= 0 && skipped.has(prev)) prev--
+  return Math.max(0, prev)
+}
 
 //-----------------COMPONENTE PRINCIPAL-----------------
 export const StudentQuestionnaire = () => {
@@ -386,9 +316,19 @@ export const StudentQuestionnaire = () => {
   const [answers, setAnswers] = useState<{ [key: string]: any }>({})
   const [sessionId] = useState(() => crypto.randomUUID())
   const [showResults, setShowResults] = useState(false)
-  const [loading, setLoading] = useState(false)
   const [matched, setMatched] = useState<TutorMatch[]>([])
+  const [loading, setLoading] = useState(false)
+  const [showTuTmaiTLoading, setShowTuTmaiTLoading] = useState(false)
+  const [priorityOrder, setPriorityOrder] = useState<number[]>([3, 4, 5, 6, 8, 9, 10, 11])
+  const [showAuthOverlay, setShowAuthOverlay] = useState(false)
+  const [pendingContact, setPendingContact] = useState<TutorMatch | null>(null)
+  const { user } = useAuth()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    console.log('[StudentQuestionnaire] session_id:', sessionId)
+    localStorage.setItem('student_session_id', sessionId)
+  }, [sessionId])
 
   //-----------------HANDLE ANSWER-----------------
   const handleAnswer = async (questionId: number, answer: any) => {
@@ -398,506 +338,721 @@ export const StudentQuestionnaire = () => {
     }
     setAnswers(newAnswers)
 
+    // Auto-avançar para perguntas de seleção única
+    const q = questions.find(q => q.id === questionId)
+    if (q && ['cards', 'single-choice-cards'].includes(q.type)) {
+      const nextStep = getNextStep(currentStep, newAnswers)
+      setTimeout(() => {
+        if (nextStep < questions.length) {
+          setCurrentStep(nextStep)
+        } else {
+          handleFinishQuestionnaire()
+        }
+      }, 300)
+    }
+
     try {
-      logSupabase('UPSERT temp_students - START', { session_id: sessionId, ...newAnswers })
+      logSupabase('UPSERT temp_students', { session_id: sessionId })
       const { data, error } = await supabase
         .from('temp_students')
-        .upsert({ session_id: sessionId, ...newAnswers }, { onConflict: 'session_id' })
+        .upsert({
+          session_id: sessionId,
+          question_1_answer: newAnswers['question_1_answer'] || '',
+          raw_answers: newAnswers
+        }, { onConflict: 'session_id' })
       if (error) throw error
-      logSupabase('UPSERT temp_students - SUCCESS', data)
+      logSupabase('UPSERT temp_students - OK', data)
     } catch (error) {
       console.warn('⚠️ Erro ao salvar temporário:', error)
     }
   }
 
-  //-----------------HANDLE FINISH QUESTIONNAIRE-----------------
-  const handleFinish = async () => {
+  //-----------------FINISH QUESTIONNAIRE-----------------
+  const handleFinishQuestionnaire = async (extraAnswers?: Record<string, any>) => {
     setLoading(true)
     try {
-       const matches = await getBestTutorMatches(answers as any)
-       setMatched(matches)
-       setShowResults(true)
-    } catch (e) {
-      console.error(e)
+      const finalAnswers = { ...answers, ...(extraAnswers || {}) }
+      const matches = await getBestTutorMatches(finalAnswers as any)
+      logSupabase('MATCHES CALCULADOS', { count: matches.length })
+      setMatched(matches)
+    } catch (err) {
+      console.error('❌ Erro ao calcular matches:', err)
+      setMatched([])
     }
     setLoading(false)
+    setShowTuTmaiTLoading(true)
+    await new Promise(resolve => setTimeout(resolve, 5000))
+    setShowTuTmaiTLoading(false)
+    setShowResults(true)
   }
 
   //-----------------GO BACK-----------------
   const goBack = () => {
-    if (showResults) setShowResults(false)
-    else if (currentStep > 0) setCurrentStep(prev => prev - 1)
+    if (showResults) { setShowResults(false); return }
+    if (currentStep > 0) setCurrentStep(getPrevStep(currentStep, answers))
   }
 
-  const handleNext = () => {
-    if (currentStep < questions.length - 1) {
-       setCurrentStep(prev => prev + 1)
+  //-----------------CONTACTAR TUTOR-----------------
+  const handleContact = (tutor: TutorMatch) => {
+    if (user) {
+      const subject = encodeURIComponent('Pedido de Explicações')
+      const body = encodeURIComponent(
+        `Olá ${tutor.name},\n\nEncontrei o seu perfil no ExplicaMatch e gostaria de saber mais sobre as suas explicações.\n\nCom os melhores cumprimentos`
+      )
+      window.open(`mailto:${tutor.email}?subject=${subject}&body=${body}`, '_blank')
     } else {
-       handleFinish()
+      setPendingContact(tutor)
+      setShowAuthOverlay(true)
     }
   }
 
-//-----------------RENDER QUESTION CONTENT-----------------
-  // Esta função gerencia o fluxo de perguntas condicionais.
-  // Algumas perguntas só aparecem ou mudam a sua estrutura de opções (Dropdown) com base em respostas prévias.
-  const renderQuestionContent = (question: Question): React.ReactNode => {
-    if (question.type === 'conditional') {
-      const cq = question as ConditionalQuestion
-      const parentAnswerKey = `question_${cq.dependsOn}_answer` // A resposta da qual esta pergunta depende
-      const parentAnswer = answers[parentAnswerKey]
-  
-      // Fallback: se o aluno não tiver respondido "Ensino Básico", avança a pergunta sobre o ciclo de estudos da primária/básico
-      if (!parentAnswer && question.id === 3) {
-        return renderStepContent(cq.conditions.find(c => c.value === '')?.question as Question)
-      }
-  
-      // Procura a condição correspondente à resposta anterior
-      const condition =
-        cq.conditions.find(c => c.value === parentAnswer) || cq.conditions[0]
-  
-      // 🔹 Lógica dinâmica para Distritos, Municípios e Freguesias
-      // O array de options das perguntas 11 (Município) e 12 (Freguesia) são preenchidos
-      // com base no array retornado pelas funções de mapa de localização e a resposta base (parent).
-      if ('options' in condition.question) {
-        if (condition.question.id === 11) {
-          const distritoSelecionado = answers['question_10_answer']
-          condition.question.options = getMunicipiosByDistrito(distritoSelecionado).map(m => ({ value: m, label: m }))
-        }
-  
-        if (condition.question.id === 12) {
-          const municipioSelecionado = answers['question_11_answer']
-          const distritoSelecionado = answers['question_10_answer']
-          condition.question.options = getFreguesiasByMunicipio(distritoSelecionado, municipioSelecionado).map(f => ({ value: f, label: f }))
+  //-----------------AUTH COMPLETE-----------------
+  const handleAuthComplete = async (userId: string) => {
+    try {
+      const { data: tempData } = await supabase
+        .from('temp_students')
+        .select('*')
+        .eq('session_id', sessionId)
+        .single()
+      if (tempData) {
+        const { data: authData } = await supabase.auth.getUser()
+        const u = authData?.user
+        const { error } = await supabase.from('students').insert({
+          user_id: userId,
+          name: u?.user_metadata?.name || u?.email?.split('@')[0] || '',
+          email: u?.email || '',
+          question_1_answer: tempData.question_1_answer || '',
+          raw_answers: tempData.raw_answers || {},
+          subjects: tempData.raw_answers?.question_3_answer || [],
+        })
+        if (!error) {
+          await supabase.from('temp_students').delete().eq('session_id', sessionId)
         }
       }
-  
-      // Chamada recursiva para caso haja condições aninhadas dentro umas das outras
-      return renderQuestionContent(condition.question)
+    } catch (err) {
+      console.warn('Aviso ao criar perfil:', err)
     }
-  
-    // Se não for condicional, passa logo para o renderizador de UI normal
-    return renderStepContent(question)
+    setShowAuthOverlay(false)
+    if (pendingContact) {
+      handleContact(pendingContact)
+      setPendingContact(null)
+    }
   }
 
   //-----------------RENDER STEP CONTENT-----------------
-  // Este Switch Case é o coração da interface do Questionário (tanto aluno como tutor).
-  // Consoante o `type` da pergunta configurada no array inicial `questions`, 
-  // ele devolve a interface apropriada para recolher a resposta.
-  const renderStepContent = (question: Question) => {
+  const renderStepContent = (question: Question): React.ReactNode => {
     switch (question.type) {
+
+      // --- CARDS (seleção única, auto-avança) ---
       case 'cards':
-        // 🔹 Cartões de escolha única (ex: Fase escolar)
         return (
-        <div className="space-y-6 flex flex-col items-center">
-          <div className="text-center mb-8 flex flex-col items-center justify-center gap-2 relative">
-            <div className="flex items-center gap-2">
+          <div className="space-y-6">
+            <div className="text-center mb-8">
+              {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-blue-500" />}
               <h2 className="text-2xl font-bold">{question.title}</h2>
-              {question.tooltip && (
-                <div className="group relative flex items-center justify-center cursor-help">
-                  <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold ring-2 ring-blue-50">?</div>
-                  <div className="absolute bottom-full mb-2 hidden group-hover:block w-64 p-3 bg-gray-900 text-white text-sm rounded-lg shadow-xl z-50 transition-opacity duration-200 opacity-0 group-hover:opacity-100 left-1/2 -translate-x-1/2 text-center pointer-events-none after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-4 after:border-transparent after:border-t-gray-900">
-                    {question.tooltip}
-                  </div>
-                </div>
-              )}
+              {question.subtitle && <p className="text-gray-600 mt-2">{question.subtitle}</p>}
             </div>
-            {question.subtitle && <p className="text-gray-600">{question.subtitle}</p>}
-          </div>
-          <div className="grid gap-4 w-full">
-            {question.options.map(option => (
-              <button
-                key={option.value}
-                onClick={() => handleAnswer(question.id, option.value)}
-                className={`p-4 rounded-xl border-2 text-left w-full ${
-                  answers[`question_${question.id}_answer`] === option.value
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )
-
-      case 'cards-with-other':
-        // 🔹 Cartões que oferecem a opção "Outros", revelando um campo de input de texto adicional
-        return (
-        <div className="space-y-6">
-          <div className="text-center mb-8 flex flex-col items-center justify-center gap-2">
-             <div className="flex items-center gap-2">
-               {question.icon && <question.icon className="w-8 h-8 text-blue-500" />}
-              <h2 className="text-2xl font-bold">{question.title}</h2>
-               {question.tooltip && (
-                <div className="group relative flex items-center justify-center cursor-help">
-                  <div className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold ring-2 ring-blue-50">?</div>
-                  <div className="absolute bottom-full mb-2 hidden group-hover:block w-64 p-3 bg-gray-900 text-white text-sm rounded-lg shadow-xl z-50 transition-opacity duration-200 opacity-0 group-hover:opacity-100 left-1/2 -translate-x-1/2 text-center pointer-events-none after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-4 after:border-transparent after:border-t-gray-900">
-                    {question.tooltip}
-                  </div>
-                </div>
-              )}
-            </div>
-            {question.subtitle && <p className="text-gray-600">{question.subtitle}</p>}
-          </div>
-
-          <div className="grid gap-3">
-            {question.options.map(option => (
-              <button
-                key={option.value}
-                onClick={() => handleAnswer(question.id, option.value)}
-                className={`p-4 rounded-lg border-2 text-left ${
-                  answers[`question_${question.id}_answer`] === option.value
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-
-          {answers[`question_${question.id}_answer`] === 'Outro' && (
-            <input
-              type="text"
-              placeholder="Especificar"
-              value={answers[`question_${question.id}_other`] || ''}
-              onChange={e =>
-                setAnswers(prev => ({
-                  ...prev,
-                  [`question_${question.id}_other`]: e.target.value
-                }))
-              }
-              className="w-full p-4 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none text-lg"
-            />
-          )}
-        </div>
-      )
-
-      case 'yes-no-with-extra':
-        // 🔹 Respostas binárias (Sim/Não) com input adicional condicional se responderem "Sim"
-        return (
-        <div className="space-y-6">
-          <div className="text-center mb-8 flex flex-col items-center justify-center gap-2">
-            <div className="flex items-center gap-2">
-              <h2 className="text-2xl font-bold">{question.title}</h2>
-            </div>
-            {question.subtitle && <p className="text-gray-600">{question.subtitle}</p>}
-          </div>
-
-          <div className="grid gap-3">
-            {['Sim', 'Não'].map(option => (
-              <button
-                key={option}
-                onClick={() => handleAnswer(question.id, option)}
-                className={`p-4 rounded-lg border-2 text-left ${
-                  answers[`question_${question.id}_answer`] === option
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-
-          {answers[`question_${question.id}_answer`] === 'Sim' && (
-            <input
-              type="number"
-              min={0}
-              placeholder={question.extraLabel}
-              value={answers[`question_${question.id}_extra`] || ''}
-              onChange={e =>
-                setAnswers(prev => ({
-                  ...prev,
-                  [`question_${question.id}_extra`]: e.target.value
-                }))
-              }
-              className="w-full p-4 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none text-lg"
-            />
-          )}
-        </div>
-      )
-
-      case 'cards-multiple':
-        // 🔹 Cartões de resposta múltipla (o aluno pode selecionar N opções e clica noutra para desmarcar; ex: Hobbies)
-        const selectedValues: string[] = Array.isArray(answers[`question_${question.id}_answer`])
-        ? answers[`question_${question.id}_answer`]
-        : []
-
-      return (
-        <div className="space-y-6">
-          <div className="text-center mb-8 flex flex-col items-center justify-center gap-2">
-             <div className="flex items-center gap-2">
-              {question.icon && <question.icon className="w-8 h-8 text-purple-500" />}
-              <h2 className="text-2xl font-bold">{question.title}</h2>
-            </div>
-            {question.subtitle && <p className="text-gray-600">{question.subtitle}</p>}
-          </div>
-
-          <div className="grid gap-3">
-            {question.options.map(option => {
-              const isSelected = selectedValues.includes(option.value)
-              return (
+            <div className="grid gap-3">
+              {question.options.map(option => (
                 <button
                   key={option.value}
-                  onClick={() => {
-                    const newValues = isSelected
-                      ? selectedValues.filter(v => v !== option.value)
-                      : [...selectedValues, option.value]
-                    handleAnswer(question.id, newValues)
-                  }}
-                  className={`p-4 rounded-lg border-2 text-left flex justify-between items-center ${
-                    isSelected
-                      ? 'border-purple-500 bg-purple-50 text-purple-700'
+                  onClick={() => handleAnswer(question.id, option.value)}
+                  className={`p-4 rounded-xl border-2 text-left flex items-center gap-3 ${
+                    answers[`question_${question.id}_answer`] === option.value
+                      ? 'border-blue-500 bg-blue-50'
                       : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                   }`}
                 >
+                  {option.icon && <option.icon className="w-5 h-5 text-gray-500 flex-shrink-0" />}
                   <span>{option.label}</span>
-                  {isSelected && <Check className="w-5 h-5 text-purple-600" />}
                 </button>
-              )
-            })}
-          </div>
-        </div>
-      )
-
-      case 'availability-grid':
-        // 🔹 Componente custom de grelha (Tabela 7x3) para colher as manhãs/tardes/noites de segunda a domingo
-        return (
-        <div className="space-y-6">
-          <div className="text-center mb-8 flex flex-col items-center justify-center gap-2">
-             <div className="flex items-center gap-2">
-              {question.icon && <question.icon className="w-8 h-8 text-green-500" />}
-              <h2 className="text-2xl font-bold">{question.title}</h2>
+              ))}
             </div>
-            {question.subtitle && <p className="text-gray-600">{question.subtitle}</p>}
           </div>
+        )
 
-          <div className="grid grid-cols-7 gap-2 text-center">
-            {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map(day => (
-              <div key={day}>
-                <p className="font-semibold mb-1">{day}</p>
-                <div className="grid grid-rows-3 gap-1">
-                  {['Manhã', 'Tarde', 'Noite'].map(slot => {
-                    const key = `${day}_${slot}`
-                    const selected = answers[`question_${question.id}_answer`] || {}
-                    const isSelected = selected[key]
+      // --- CARDS MÚLTIPLA ---
+      case 'cards-multiple': {
+        const selectedValues: string[] = Array.isArray(answers[`question_${question.id}_answer`])
+          ? answers[`question_${question.id}_answer`]
+          : []
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-8">
+              {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-purple-500" />}
+              <h2 className="text-2xl font-bold">{question.title}</h2>
+              {question.subtitle && <p className="text-gray-600 mt-2">{question.subtitle}</p>}
+            </div>
+            <div className="grid gap-3">
+              {question.options.map(option => {
+                const isSelected = selectedValues.includes(option.value)
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => {
+                      const newValues = isSelected
+                        ? selectedValues.filter(v => v !== option.value)
+                        : [...selectedValues, option.value]
+                      handleAnswer(question.id, newValues)
+                    }}
+                    className={`p-4 rounded-lg border-2 text-left flex justify-between items-center ${
+                      isSelected
+                        ? 'border-purple-500 bg-purple-50 text-purple-700'
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span>{option.label}</span>
+                    {isSelected && <Check className="w-5 h-5 text-purple-600 flex-shrink-0" />}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )
+      }
 
-                    return (
-                      <button
-                        key={slot}
-                        onClick={() => handleAnswer(question.id, { ...selected, [key]: !isSelected })}
-                        className={`border p-2 rounded-lg w-full text-sm ${
-                          isSelected ? 'bg-green-500 text-white' : 'bg-gray-100 hover:bg-gray-200'
-                        }`}
-                      >
-                        {slot}
-                      </button>
-                    )
-                  })}
+      // --- GRELHA DE DISPONIBILIDADE ---
+      case 'availability-grid': {
+        const slotTimes: Record<string, string> = {
+          'Manhã': '08h–13h',
+          'Tarde': '13h–18h',
+          'Noite': '18h–23h',
+        }
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-6">
+              {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-green-500" />}
+              <h2 className="text-2xl font-bold">{question.title}</h2>
+              {question.subtitle && <p className="text-gray-600 mt-2">{question.subtitle}</p>}
+            </div>
+            {/* Legenda dos períodos */}
+            <div className="flex justify-end gap-4 text-xs text-gray-500 mb-1 pr-1">
+              {(['Manhã', 'Tarde', 'Noite'] as const).map(slot => (
+                <span key={slot}><span className="font-medium text-gray-700">{slot}</span> {slotTimes[slot]}</span>
+              ))}
+            </div>
+            <div className="overflow-x-auto">
+              <div className="grid grid-cols-7 gap-2 text-center min-w-[400px]">
+                {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].map(day => (
+                  <div key={day}>
+                    <p className="font-semibold mb-2 text-sm">{day}</p>
+                    <div className="grid gap-1">
+                      {(['Manhã', 'Tarde', 'Noite'] as const).map(slot => {
+                        const key = `${day}_${slot}`
+                        const selected = answers[`question_${question.id}_answer`] || {}
+                        const isSelected = selected[key]
+                        return (
+                          <button
+                            key={slot}
+                            onClick={() => handleAnswer(question.id, { ...selected, [key]: !isSelected })}
+                            className={`border rounded-lg w-full text-xs py-2 px-1 transition-colors ${
+                              isSelected ? 'bg-green-500 text-white border-green-500' : 'bg-gray-100 hover:bg-gray-200 border-gray-200'
+                            }`}
+                          >
+                            {slot}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )
+      }
+
+      // --- SINGLE CHOICE CARDS (auto-avança) ---
+      case 'single-choice-cards': {
+        const selectedValue: string = answers[`question_${question.id}_answer`] || ''
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-8">
+              {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-blue-500" />}
+              <h2 className="text-2xl font-bold">{question.title}</h2>
+              {question.subtitle && <p className="text-gray-600 mt-2">{question.subtitle}</p>}
+            </div>
+            <div className="grid gap-3">
+              {question.options.map(option => {
+                const isSelected = selectedValue === option.value
+                const Icon = option.icon
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => handleAnswer(question.id, option.value)}
+                    className={`p-4 rounded-lg border-2 text-left flex items-start gap-3 ${
+                      isSelected
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {Icon && <Icon className="w-5 h-5 mt-0.5 flex-shrink-0" />}
+                    <div>
+                      <div className="font-medium">{option.label}</div>
+                      {option.description && <div className="text-sm text-gray-500">{option.description}</div>}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )
+      }
+
+      // --- NÍVEL + ANO (mesmo ecrã) ---
+      case 'level-year': {
+        const selectedLevel: string = answers['question_2_answer'] || ''
+        const selectedArea: string = answers['question_2_area'] || ''
+        const areaOpts = selectedLevel ? (areasByLevel[selectedLevel] || []) : []
+
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-8">
+              {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-blue-500" />}
+              <h2 className="text-2xl font-bold">{question.title}</h2>
+              {question.subtitle && <p className="text-gray-600 mt-2">{question.subtitle}</p>}
+            </div>
+
+            {/* Nível de ensino */}
+            <div>
+              <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Nível de ensino</p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {question.levelOptions.map(opt => {
+                  const hasAreas = (areasByLevel[opt.value] || []).length > 0
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => {
+                        setAnswers(prev => ({ ...prev, question_2_answer: opt.value, question_2_area: undefined }))
+                        // Níveis sem área avançam automaticamente
+                        if (!hasAreas) {
+                          const nextStep = getNextStep(currentStep, { ...answers, question_2_answer: opt.value, question_2_area: undefined })
+                          setTimeout(() => {
+                            if (nextStep < questions.length) setCurrentStep(nextStep)
+                          }, 300)
+                        }
+                      }}
+                      className={`p-3 rounded-lg border-2 text-center text-sm font-medium transition-colors ${
+                        selectedLevel === opt.value
+                          ? 'border-blue-500 bg-blue-50 text-blue-700'
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Área de ensino — aparece após escolha de nível com áreas */}
+            {selectedLevel && areaOpts.length > 0 && (
+              <div>
+                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Área de ensino</p>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {areaOpts.map(area => (
+                    <button
+                      key={area}
+                      onClick={() => {
+                        setAnswers(prev => ({ ...prev, question_2_area: area }))
+                        const nextStep = getNextStep(currentStep, { ...answers, question_2_answer: selectedLevel, question_2_area: area })
+                        setTimeout(() => {
+                          if (nextStep < questions.length) setCurrentStep(nextStep)
+                        }, 300)
+                      }}
+                      className={`p-3 rounded-lg border-2 text-center text-sm font-medium transition-colors ${
+                        selectedArea === area
+                          ? 'border-green-500 bg-green-50 text-green-700'
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {area}
+                    </button>
+                  ))}
                 </div>
               </div>
-            ))}
+            )}
           </div>
-        </div>
-      )
+        )
+      }
 
-      case 'single-choice-cards':
-  // 🔹 Igual aos 'cards' mas alinha os ícones e texto descritivo por debaixo do título, ideal para caixas compridas explicativas
-  const selectedValue: string = answers[`question_${question.id}_answer`] || ''
+      // --- LOCALIZAÇÃO (mesmo ecrã: Distrito + Concelho + Freguesia) ---
+      case 'location-screen': {
+        const selectedDistrict: string = answers['question_8_answer'] || ''
+        const selectedMunicipality: string = answers['question_8_municipality'] || ''
+        const selectedParish: string = answers['question_8_parish'] || ''
+        const municipalities = selectedDistrict ? getMunicipiosByDistrito(selectedDistrict) : []
+        const parishes = selectedMunicipality ? getFreguesiasByMunicipio(selectedDistrict, selectedMunicipality) : []
 
-  return (
-    <div className="space-y-6">
-      <div className="text-center mb-8 flex flex-col items-center justify-center gap-2">
-        <div className="flex items-center gap-2">
-          {question.icon && <question.icon className="w-8 h-8 text-blue-500" />}
-          <h2 className="text-2xl font-bold">{question.title}</h2>
-        </div>
-        {question.subtitle && <p className="text-gray-600">{question.subtitle}</p>}
-      </div>
+        return (
+          <div className="space-y-8">
+            <div className="text-center mb-6">
+              {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-blue-500" />}
+              <h2 className="text-2xl font-bold">{question.title}</h2>
+              {question.subtitle && <p className="text-gray-600 mt-2">{question.subtitle}</p>}
+            </div>
 
-      <div className="grid gap-3">
-        {question.options.map(option => {
-          const isSelected = selectedValue === option.value
+            {/* Distrito */}
+            <div>
+              <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Distrito</p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 max-h-64 overflow-y-auto pr-1">
+                {getDistritos().map(d => (
+                  <button
+                    key={d}
+                    onClick={() => {
+                      handleAnswer(8, d)
+                      setAnswers(prev => ({ ...prev, question_8_answer: d, question_8_municipality: undefined, question_8_parish: undefined }))
+                    }}
+                    className={`p-3 rounded-lg border-2 text-left text-sm transition-colors ${
+                      selectedDistrict === d
+                        ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Concelho */}
+            {selectedDistrict && municipalities.length > 0 && (
+              <div>
+                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Concelho</p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 max-h-48 overflow-y-auto pr-1">
+                  {municipalities.map(m => (
+                    <button
+                      key={m}
+                      onClick={() => {
+                        setAnswers(prev => ({ ...prev, question_8_municipality: m, question_8_parish: undefined }))
+                      }}
+                      className={`p-3 rounded-lg border-2 text-left text-sm transition-colors ${
+                        selectedMunicipality === m
+                          ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {m}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Freguesia */}
+            {selectedMunicipality && parishes.length > 0 && (
+              <div>
+                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Freguesia</p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 max-h-48 overflow-y-auto pr-1">
+                  {parishes.map(p => (
+                    <button
+                      key={p}
+                      onClick={() => setAnswers(prev => ({ ...prev, question_8_parish: p }))}
+                      className={`p-3 rounded-lg border-2 text-left text-sm transition-colors ${
+                        selectedParish === p
+                          ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium'
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      }
+
+      // --- ORDENAÇÃO POR PRIORIDADE (drag & drop) ---
+      case 'priority-ranking': {
+        const isOnline = answers['question_7_answer'] === 'online'
+        const activeCriteria = question.criteria.filter(c => !(c.questionId === 8 && isOnline))
+        const activeOrder = priorityOrder.filter(id => activeCriteria.some(c => c.questionId === id))
+
+        const badgeGradient = 'from-blue-500 to-indigo-600'
+
+        return (
+          <div className="space-y-5">
+            <div className="text-center mb-4">
+              {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-blue-500" />}
+              <h2 className="text-2xl font-bold">{question.title}</h2>
+              {question.subtitle && <p className="text-gray-500 mt-2 text-sm">{question.subtitle}</p>}
+            </div>
+            <p className="text-xs text-gray-400 text-center tracking-wide uppercase">Arrasta para reordenar</p>
+            <Reorder.Group
+              axis="y"
+              values={activeOrder}
+              onReorder={(newOrder: number[]) =>
+                setPriorityOrder(isOnline ? [...newOrder, 8] : newOrder)
+              }
+              className="space-y-2 select-none"
+            >
+              {activeOrder.map((qId, index) => {
+                const criterion = activeCriteria.find(c => c.questionId === qId)!
+                return (
+                  <Reorder.Item
+                    key={qId}
+                    value={qId}
+                    whileDrag={{
+                      scale: 1.04,
+                      boxShadow: '0 20px 40px rgba(0,0,0,0.14)',
+                      zIndex: 50,
+                    }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                    className="rounded-2xl cursor-grab active:cursor-grabbing list-none"
+                  >
+                    <div className="flex items-center gap-4 px-4 py-3.5 rounded-2xl border border-gray-100 bg-white shadow-sm hover:shadow-md hover:border-gray-200 transition-all duration-200">
+                      <span className={`w-9 h-9 rounded-full bg-gradient-to-br ${badgeGradient} text-white text-sm font-bold flex items-center justify-center flex-shrink-0 shadow`}>
+                        {index + 1}
+                      </span>
+                      <span className="flex-1 font-semibold text-gray-800 text-sm">{criterion.label}</span>
+                      <GripVertical className="w-5 h-5 text-gray-300 flex-shrink-0" />
+                    </div>
+                  </Reorder.Item>
+                )
+              })}
+            </Reorder.Group>
+          </div>
+        )
+      }
+
+      // --- SUBJECT PICKER (disciplinas por nível/área) ---
+      case 'subject-picker': {
+        const level: string = answers['question_2_answer'] || ''
+        const area: string = answers['question_2_area'] || ''
+        const key = area ? `${level}|${area}` : level
+        const subjectData = subjectsByLevelArea[key]
+
+        const selectedValues: string[] = Array.isArray(answers['question_3_answer'])
+          ? answers['question_3_answer']
+          : []
+
+        const toggle = (subject: string) => {
+          const next = selectedValues.includes(subject)
+            ? selectedValues.filter(v => v !== subject)
+            : [...selectedValues, subject]
+          handleAnswer(3, next)
+        }
+
+        const renderSubjectButton = (subject: string) => {
+          const isSelected = selectedValues.includes(subject)
           return (
             <button
-              key={option.value}
-              onClick={() => handleAnswer(question.id, option.value)}
-              className={`p-4 rounded-lg border-2 text-left flex flex-col items-start ${
+              key={subject}
+              onClick={() => toggle(subject)}
+              className={`p-3 rounded-lg border-2 text-left text-sm font-medium transition-colors flex justify-between items-center ${
                 isSelected
                   ? 'border-blue-500 bg-blue-50 text-blue-700'
                   : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
               }`}
             >
-              <div className="flex items-center gap-2 mb-1">
-                 {option.icon && <option.icon className="w-5 h-5" />}
-                 <span className="font-medium">{option.label}</span>
-              </div>
-              {option.description && <span className="text-gray-500 text-sm ml-7">{option.description}</span>}
+              <span>{subject}</span>
+              {isSelected && <Check className="w-4 h-4 text-blue-600 flex-shrink-0 ml-2" />}
             </button>
           )
-        })}
-      </div>
-    </div>
-  )
+        }
 
-  case 'priority-list':
-  // 🔹 Uma lista de blocos interativos formatados para drag-and-drop nativo HTML5 para ranquear elementos por ordem desejada
-  const prioridades: string[] =
-    answers[`question_${question.id}_answer`] && Array.isArray(answers[`question_${question.id}_answer`])
-      ? answers[`question_${question.id}_answer`]
-      : question.options.map(opt => opt.value)
+        return (
+          <div className="space-y-6">
+            <div className="text-center mb-6">
+              {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-blue-500" />}
+              <h2 className="text-2xl font-bold">{question.title}</h2>
+              {question.subtitle && <p className="text-gray-600 mt-2">{question.subtitle}</p>}
+            </div>
 
-  const handlePriorityDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
-    e.dataTransfer.setData('text/plain', index.toString())
-  }
-
-  const handlePriorityDrop = (e: React.DragEvent<HTMLDivElement>, index: number) => {
-    const draggedIndex = Number(e.dataTransfer.getData('text/plain'))
-    const newPrioridades = [...prioridades]
-    const [movedItem] = newPrioridades.splice(draggedIndex, 1)
-    newPrioridades.splice(index, 0, movedItem)
-    handleAnswer(question.id, newPrioridades)
-  }
-
-  const handlePriorityDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-  }
-
-  return (
-    <div className="space-y-6">
-      <div className="text-center mb-8 flex flex-col items-center justify-center gap-2">
-         <div className="flex items-center gap-2">
-           {question.icon && <question.icon className="w-8 h-8 text-emerald-500" />}
-           <h2 className="text-2xl font-bold text-gray-800">{question.title}</h2>
-         </div>
-        {question.subtitle && <p className="text-gray-600">{question.subtitle}</p>}
-      </div>
-
-      <div className="space-y-2">
-        {prioridades.map((item, index) => (
-          <div
-            key={item}
-            draggable
-            onDragStart={e => handlePriorityDragStart(e, index)}
-            onDrop={e => handlePriorityDrop(e, index)}
-            onDragOver={handlePriorityDragOver}
-            className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg cursor-move hover:bg-gray-100 transition-colors"
-          >
-            <GripVertical className="w-5 h-5 text-gray-400" />
-            <span className="w-8 h-8 bg-emerald-600 text-white rounded-full flex items-center justify-center font-semibold text-sm">
-              {index + 1}
-            </span>
-            <span className="font-medium text-gray-700">{item}</span>
+            {!subjectData ? (
+              <p className="text-center text-gray-400 text-sm">Nenhuma disciplina disponível para esta combinação.</p>
+            ) : Array.isArray(subjectData) ? (
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {subjectData.map(renderSubjectButton)}
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {Object.entries(subjectData).map(([category, subjects]) => (
+                  <div key={category}>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{category}</p>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {subjects.map(renderSubjectButton)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        ))}
-      </div>
+        )
+      }
 
-      <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-        <p className="text-sm text-blue-700">
-          💡 Arrasta os itens para reordenar por prioridade (1 = mais importante)
-        </p>
-      </div>
-    </div>
-  )
-    default:
-      return null
+      default:
+        return null
+    }
   }
-}
 
-  return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto">
-        {!showResults ? (
-          <>
-            <div className="mb-8">
-              <div className="flex justify-between text-sm text-gray-500 mb-2">
-                <span>Passo {currentStep + 1} de {questions.length}</span>
-                <span>{Math.round(((currentStep + 1) / questions.length) * 100)}%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${((currentStep + 1) / questions.length) * 100}%` }}
-                ></div>
-              </div>
-            </div>
+  //-----------------VALIDAÇÃO DO BOTÃO SEGUINTE-----------------
+  const isNextDisabled = (): boolean => {
+    if (loading) return true
+    const question = questions[currentStep]
+    if (question.type === 'level-year') {
+      const level = answers['question_2_answer']
+      if (!level) return true
+      const areas = areasByLevel[level] || []
+      if (areas.length === 0) return false
+      return !answers['question_2_area']
+    }
+    if (question.type === 'location-screen') {
+      return !answers['question_8_answer']
+    }
+    if (question.type === 'priority-ranking') return false
+    const currentAnswer = answers[`question_${question.id}_answer`]
+    return currentAnswer === undefined || (Array.isArray(currentAnswer) && currentAnswer.length === 0)
+  }
 
-            <Card className="p-8 shadow-xl border-0 bg-white/80 backdrop-blur-sm min-h-[400px]">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={currentStep}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  {renderQuestionContent(questions[currentStep])}
-                </motion.div>
-              </AnimatePresence>
+  //-----------------RENDER COMPONENT-----------------
+  if (showTuTmaiTLoading) {
+    return <TuTmaiTLoading />
+  }
 
-              <div className="mt-8 pt-6 border-t flex justify-between">
-                <Button
-                  variant="outline"
-                  onClick={goBack}
-                  disabled={currentStep === 0}
-                  className="w-32"
-                >
-                  <ChevronLeft className="w-4 h-4 mr-2" />
-                  Voltar
-                </Button>
-                
-                <Button
-                  onClick={handleNext}
-                  className="w-32 bg-blue-600 hover:bg-blue-700 text-white"
-                  disabled={loading}
-                >
-                  {loading ? 'A processar...' : (currentStep === questions.length - 1 ? 'Concluir' : 'Próximo')}
-                  {!loading && currentStep < questions.length - 1 && <ChevronRight className="w-4 h-4 ml-2" />}
-                </Button>
-              </div>
-            </Card>
-          </>
-        ) : (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="text-center"
-          >
-            <div className="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Check className="w-10 h-10" />
-            </div>
-            <h2 className="text-3xl font-bold mb-4">Questionário Concluído!</h2>
-            <p className="text-gray-600 text-lg mb-8">
-               A analisar os teus matches ideais...
-            </p>
-            <Button
-              onClick={() => navigate('/')}
-              variant="outline"
-              className="mt-4"
+  if (showResults) {
+    return (
+      <>
+        <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+          <div className="max-w-3xl mx-auto text-center">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
             >
-              Voltar ao Início
-            </Button>
-            
-            {matched && matched.length > 0 && (
+              <div className="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Check className="w-10 h-10" />
+              </div>
+              <h2 className="text-3xl font-bold mb-4">Questionário Concluído!</h2>
+              <p className="text-gray-600 text-lg mb-8">
+                Baseado nas tuas respostas, encontrámos estes explicadores ideais para ti.
+              </p>
+              <Button onClick={() => navigate('/')} variant="outline" className="mt-4">
+                Voltar ao Início
+              </Button>
+
+              {matched && matched.length > 0 && (
                 <div className="mt-12 text-left">
                   <h3 className="text-2xl font-bold mb-4 text-center">Os teus matches</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                     {matched.map((t: any) => (
-                        <Card key={t.tutorId} className="p-6">
-                            <h3 className="text-xl font-bold">{t.name}</h3>
-                            <p className="text-gray-600">{t.subjects?.join(', ')}</p>
-                            <div className="mt-4">
-                              <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">Match: {t.compatibility}%</span>
-                            </div>
-                        </Card>
-                     ))}
+                    {matched.map((t) => (
+                      <Card key={t.tutorId} className="p-6 flex flex-col gap-3">
+                        <div>
+                          <h3 className="text-xl font-bold">{t.name}</h3>
+                          <p className="text-gray-600 text-sm">{t.subjects?.join(', ')}</p>
+                        </div>
+                        <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded self-start">
+                          Match: {t.compatibility}%
+                        </span>
+                        <Button
+                          onClick={() => handleContact(t)}
+                          className="w-full mt-auto"
+                        >
+                          <Mail className="w-4 h-4 mr-2" /> Contactar
+                        </Button>
+                      </Card>
+                    ))}
                   </div>
                 </div>
-            )}
-          </motion.div>
+              )}
+            </motion.div>
+          </div>
+        </div>
+
+        {showAuthOverlay && (
+          <div
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                setShowAuthOverlay(false)
+                setPendingContact(null)
+              }
+            }}
+          >
+            <div className="relative w-full max-w-sm">
+              <button
+                onClick={() => { setShowAuthOverlay(false); setPendingContact(null) }}
+                className="absolute -top-3 -right-3 z-10 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-400 hover:text-gray-700 text-sm font-bold"
+              >
+                ✕
+              </button>
+              <AuthModal
+                modal
+                role="student"
+                onComplete={handleAuthComplete}
+                title="Inicia sessão para contactar"
+                subtitle={`Para contactar ${pendingContact?.name || 'o explicador'}, cria uma conta ou inicia sessão`}
+              />
+            </div>
+          </div>
         )}
+      </>
+    )
+  }
+
+  const question = questions[currentStep]
+  const progress = ((currentStep + 1) / questions.length) * 100
+
+  return (
+    <div className="min-h-screen py-8 bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50">
+      <div className="max-w-4xl mx-auto px-4">
+        <motion.div className="mb-8">
+          <div className="bg-white rounded-full h-3 overflow-hidden shadow-sm">
+            <motion.div
+              className="h-full bg-gradient-to-r from-yellow-400 to-green-400"
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.5 }}
+            />
+          </div>
+          <p className="text-sm text-gray-600 mt-2 text-center">
+            {Math.round(progress)}%
+          </p>
+        </motion.div>
+
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentStep}
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -50 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Card className="p-8 shadow-xl bg-white/80 backdrop-blur-sm">
+              {renderStepContent(question)}
+
+              <div className="flex justify-between mt-8">
+                <Button variant="outline" onClick={goBack} disabled={currentStep === 0}>
+                  <ChevronLeft className="h-4 w-4" />
+                  Anterior
+                </Button>
+
+                <Button
+                  onClick={() => {
+                    const next = getNextStep(currentStep, answers)
+                    if (next < questions.length) {
+                      setCurrentStep(next)
+                    } else {
+                      // Calcular ranks da ordenação de prioridades
+                      const isOnline = answers['question_7_answer'] === 'online'
+                      const activeOrder = priorityOrder.filter(id => !(id === 8 && isOnline))
+                      const rankAnswers: Record<string, any> = {}
+                      activeOrder.forEach((qId, index) => {
+                        rankAnswers[`question_${qId}_rank`] = index + 1
+                      })
+                      handleFinishQuestionnaire(rankAnswers)
+                    }
+                  }}
+                  disabled={isNextDisabled()}
+                >
+                  {loading ? 'A calcular matches...' : questions[currentStep].type === 'priority-ranking' ? 'Ver os meus matches' : 'Seguinte'}
+                  {!loading && questions[currentStep].type !== 'priority-ranking' && <ChevronRight className="h-4 w-4" />}
+                </Button>
+              </div>
+            </Card>
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   )

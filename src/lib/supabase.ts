@@ -42,6 +42,18 @@ export type TempStudentData = {
   id?: string;
   session_id: string;
   question_1_answer: string;
-  question_2_answer: string;
+  raw_answers?: Record<string, any>;
   created_at?: string;
+};
+
+export type StudentData = {
+  id?: string;
+  user_id: string;
+  name?: string;
+  email?: string;
+  question_1_answer?: string;
+  raw_answers?: Record<string, any>;
+  subjects?: string[];
+  created_at?: string;
+  updated_at?: string;
 };

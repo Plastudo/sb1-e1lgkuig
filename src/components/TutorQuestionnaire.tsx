@@ -287,15 +287,6 @@ const questions: Question[] = [
     ]
   },
   
-  // Distrito (quando "presencial")
-{
-  id: 10,
-  type: 'cards',
-  title: 'Distrito',
-  icon: MapPin,
-  options: getDistritos().map(d => ({ value: d, label: d }))
-},
-
 // Município (dependente do Distrito)
 {
   id: 11,
@@ -379,6 +370,33 @@ const questions: Question[] = [
     ]
   }
 ]
+//-----------------HELPERS DE NAVEGAÇÃO COM SKIP-----------------
+function getSkippedIndexes(currentAnswers: Record<string, any>): Set<number> {
+  const q9 = currentAnswers['question_9_answer']
+  const skipped = new Set<number>()
+  questions.forEach((q, idx) => {
+    if (q.type === 'conditional') {
+      const cq = q as ConditionalQuestion
+      if ((cq.dependsOn === 10 || cq.dependsOn === 11) && q9 !== 'presencial' && q9 !== 'indiferente') skipped.add(idx)
+    }
+  })
+  return skipped
+}
+
+function getNextStep(from: number, currentAnswers: Record<string, any>): number {
+  const skipped = getSkippedIndexes(currentAnswers)
+  let next = from + 1
+  while (next < questions.length && skipped.has(next)) next++
+  return next
+}
+
+function getPrevStep(from: number, currentAnswers: Record<string, any>): number {
+  const skipped = getSkippedIndexes(currentAnswers)
+  let prev = from - 1
+  while (prev >= 0 && skipped.has(prev)) prev--
+  return Math.max(0, prev)
+}
+
 //-----------------COMPONENTE PRINCIPAL-----------------
 export const TutorQuestionnaire = () => {
   const [currentStep, setCurrentStep] = useState(0)
@@ -394,6 +412,15 @@ export const TutorQuestionnaire = () => {
       [`question_${questionId}_answer`]: answer
     }
     setAnswers(newAnswers)
+
+    // Auto-avançar para perguntas de seleção única
+    const q = questions.find(q => q.id === questionId)
+    if (q && ['cards', 'single-choice-cards'].includes(q.type)) {
+      const nextStep = getNextStep(currentStep, newAnswers)
+      setTimeout(() => {
+        if (nextStep < questions.length) setCurrentStep(nextStep)
+      }, 300)
+    }
 
     try {
       logSupabase('UPSERT temp_tutores - START', { session_id: sessionId, ...newAnswers })
@@ -456,7 +483,7 @@ export const TutorQuestionnaire = () => {
 
   //-----------------GO BACK-----------------
   const goBack = () => {
-    if (currentStep > 0) setCurrentStep(prev => prev - 1)
+    if (currentStep > 0) setCurrentStep(getPrevStep(currentStep, answers))
   }
 //-----------------ReNDER QUESTION CONTENT (COM MUNICÍPIO/FREGUESIA DINÂMICO)-----------------
 const renderQuestionContent = (question: Question): React.ReactNode => {
@@ -893,8 +920,9 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
 
                 <Button
                   onClick={() => {
-                    if (currentStep < questions.length - 1) {
-                      setCurrentStep(prev => prev + 1)
+                    const next = getNextStep(currentStep, answers)
+                    if (next < questions.length) {
+                      setCurrentStep(next)
                     } else {
                       setShowAuth(true)
                     }
