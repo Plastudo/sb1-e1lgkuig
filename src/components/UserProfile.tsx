@@ -65,32 +65,48 @@ export const UserProfile = () => {
   }, [user, authLoading, navigate])
 
   //-----------------FUNÇÃO LOAD-----------------
-  // Esta função carrega os dados específicos de Tutor associados ao utilizador atual
+  // Deteta o role do utilizador e redireciona para o perfil correto
   const loadTutorProfile = async () => {
     if (!user) return
 
     try {
-      // Pedido Supabase: procura 1 registo (single) na tabela 'tutores' com o mesmo user_id
-      const { data, error } = await supabase
+      // 1. Buscar metadados frescos do Supabase (evita cache do contexto React)
+      const { data: freshData } = await supabase.auth.getUser()
+      const metaRole = freshData?.user?.user_metadata?.role
+      if (metaRole === 'tutor') { navigate('/dashboard/tutor-profile'); return }
+      if (metaRole === 'student') { navigate('/dashboard/student-profile'); return }
+
+      // 2. Fallback: verificar tabela tutores
+      const { data: tutorData } = await supabase
         .from('tutores')
-        .select('*')
+        .select('id')
         .eq('user_id', user.id)
-        .single()
+        .maybeSingle()
 
-      // 🔹 Tratamento de Erro Específico:
-      // PGRST116 é o código do PostgREST para "Zero linhas retornadas" da DB.
-      // Ignoramos este erro intencionalmente, pois significa apenas que o user ainda não é tutor (não completou o questionário).
-      if (error && error.code !== 'PGRST116') {
-        throw error
-      }
-
-      if (data) {
+      if (tutorData) {
+        await supabase.auth.updateUser({ data: { role: 'tutor' } })
         navigate('/dashboard/tutor-profile')
-      } else {
-        setTutorProfile(null)
+        return
       }
+
+      // 3. Fallback: verificar tabela students
+      const { data: studentData } = await supabase
+        .from('students')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (studentData) {
+        await supabase.auth.updateUser({ data: { role: 'student' } })
+        navigate('/dashboard/student-profile')
+        return
+      }
+
+      // 4. Role desconhecido — mostrar seleção
+      setTutorProfile(null)
     } catch (error) {
-      console.error('Erro ao carregar perfil de tutor:', error)
+      console.error('Erro ao carregar perfil:', error)
+      setTutorProfile(null)
     } finally {
       setLoading(false)
     }
@@ -181,20 +197,33 @@ export const UserProfile = () => {
             )}
           </Card>
         ) : (
-          <Card className="p-6 text-center bg-white/80 backdrop-blur-sm">
-            <BookOpen className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-lg font-semibold mb-2">
-              Perfil de explicador não encontrado
-            </h3>
-            <p className="text-gray-600 mb-4">
-              Complete o questionário para criar o seu perfil.
+          <Card className="p-6 bg-white/80 backdrop-blur-sm">
+            <h3 className="text-lg font-semibold mb-2 text-center">O que pretendes fazer?</h3>
+            <p className="text-gray-600 mb-6 text-center text-sm">
+              Completa o questionário para criar o teu perfil.
             </p>
-            <Button
-              onClick={() => navigate('/tutor-questionnaire')}
-              className="bg-gradient-to-r from-green-500 to-blue-500"
-            >
-              Criar perfil de explicador
-            </Button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                onClick={() => navigate('/tutor-questionnaire')}
+                className="p-5 rounded-2xl border-2 border-primary/30 bg-tutor-green-light/30 hover:border-primary hover:bg-tutor-green-light/60 transition-all text-left group"
+              >
+                <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center mb-3">
+                  <BookOpen className="h-5 w-5 text-primary" />
+                </div>
+                <p className="font-semibold text-foreground">Sou Explicador</p>
+                <p className="text-xs text-muted-foreground mt-1">Cria o teu perfil e começa a dar aulas</p>
+              </button>
+              <button
+                onClick={() => navigate('/dashboard/student-profile')}
+                className="p-5 rounded-2xl border-2 border-accent/30 bg-student-yellow-light/30 hover:border-accent hover:bg-student-yellow-light/60 transition-all text-left group"
+              >
+                <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center mb-3">
+                  <User className="h-5 w-5 text-accent" />
+                </div>
+                <p className="font-semibold text-foreground">Sou Estudante</p>
+                <p className="text-xs text-muted-foreground mt-1">Aceder ao meu perfil</p>
+              </button>
+            </div>
           </Card>
         )}
 

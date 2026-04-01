@@ -1,18 +1,18 @@
 //-----------------STUDENT QUESTIONNAIRE-----------------
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence, Reorder } from 'framer-motion'
 import { Button } from './ui/button'
 import { Card } from './ui/card'
 import { supabase } from '../lib/supabase'
-import { ChevronRight, ChevronLeft, Check, Mail, GripVertical, ChevronDown } from 'lucide-react'
+import { ChevronRight, ChevronLeft, Check, GripVertical } from 'lucide-react'
 import { AuthModal } from './AuthModal'
 import { BookOpen, User, Building, Gamepad, Target, GraduationCap, MapPin } from 'lucide-react'
 import { Calendar, Monitor, Home } from 'lucide-react'
 import { getDistritos, getMunicipiosByDistrito, getFreguesiasByMunicipio } from '../data/locationMap'
 import { getBestTutorMatches, TutorMatch } from '../Functions/BestFitTutors'
 import { TuTmaiTLoading } from './TuTmaiTLoading'
-import { subjectsByLevelArea, SubjectData } from '../data/subjectsByLevel'
+import { subjectsByLevelArea } from '../data/subjectsByLevel'
 import { useAuth } from '../contexts/AuthContext'
 import { Footer } from './Footer'
 
@@ -322,8 +322,9 @@ export const StudentQuestionnaire = () => {
   const [showTuTmaiTLoading, setShowTuTmaiTLoading] = useState(false)
   const [priorityOrder, setPriorityOrder] = useState<number[]>([3, 4, 5, 6, 8, 9, 10, 11])
   const [showAuthOverlay, setShowAuthOverlay] = useState(false)
-  const [pendingContact, setPendingContact] = useState<TutorMatch | null>(null)
-  const { user } = useAuth()
+  const [pendingTutorId, setPendingTutorId] = useState<string | null>(null)
+  const finalAnswersRef = useRef<Record<string, any>>({})
+  const { user, userRole } = useAuth()
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -369,10 +370,43 @@ export const StudentQuestionnaire = () => {
   }
 
   //-----------------FINISH QUESTIONNAIRE-----------------
+  //-----------------CRIAR PERFIL DE ALUNO-----------------
+  const createStudentProfile = async (userId: string, finalAnswers: Record<string, any>, tutorId?: string | null) => {
+    try {
+      const { data: authData } = await supabase.auth.getUser()
+      const u = authData?.user
+      const { error } = await supabase.from('students').upsert({
+        user_id: userId,
+        name: u?.user_metadata?.name || u?.email?.split('@')[0] || '',
+        email: u?.email || '',
+        question_1_answer: finalAnswers['question_1_answer'] || '',
+        raw_answers: finalAnswers,
+        subjects: finalAnswers['question_3_answer'] || [],
+      }, { onConflict: 'user_id' })
+      if (error) {
+        console.error('Erro ao criar perfil de aluno:', error)
+      } else {
+        await supabase.from('temp_students').delete().eq('session_id', sessionId)
+      }
+      // Adicionar tutor escolhido aos favoritos (ignora se já existir)
+      if (tutorId) {
+        await supabase.from('student_favorites')
+          .insert({ student_user_id: userId, tutor_id: tutorId })
+          .then(({ error }) => {
+            if (error && !error.message.includes('duplicate')) {
+              console.error('Erro ao adicionar favorito:', error)
+            }
+          })
+      }
+    } catch (err) {
+      console.error('Aviso ao criar perfil de aluno:', err)
+    }
+  }
+
   const handleFinishQuestionnaire = async (extraAnswers?: Record<string, any>) => {
     setLoading(true)
+    const finalAnswers = { ...answers, ...(extraAnswers || {}) }
     try {
-      const finalAnswers = { ...answers, ...(extraAnswers || {}) }
       const matches = await getBestTutorMatches(finalAnswers as any)
       logSupabase('MATCHES CALCULADOS', { count: matches.length })
       setMatched(matches)
@@ -384,7 +418,15 @@ export const StudentQuestionnaire = () => {
     setShowTuTmaiTLoading(true)
     await new Promise(resolve => setTimeout(resolve, 5000))
     setShowTuTmaiTLoading(false)
+    finalAnswersRef.current = finalAnswers
     setShowResults(true)
+
+    // Se já autenticado: criar perfil de aluno imediatamente (sem tutor nos favoritos — escolhe depois)
+    if (user) {
+      await createStudentProfile(user.id, finalAnswers, null)
+      localStorage.setItem('tutmait_role', 'student')
+      supabase.auth.updateUser({ data: { role: 'student' } })
+    }
   }
 
   //-----------------GO BACK-----------------
@@ -393,50 +435,42 @@ export const StudentQuestionnaire = () => {
     if (currentStep > 0) setCurrentStep(getPrevStep(currentStep, answers))
   }
 
-  //-----------------CONTACTAR TUTOR-----------------
-  const handleContact = (tutor: TutorMatch) => {
+  //-----------------SELECIONAR TUTOR-----------------
+  const handleSelectTutor = (tutorId: string) => {
     if (user) {
-      const subject = encodeURIComponent('Pedido de Explicações')
-      const body = encodeURIComponent(
-        `Olá ${tutor.name},\n\nEncontrei o seu perfil no ExplicaMatch e gostaria de saber mais sobre as suas explicações.\n\nCom os melhores cumprimentos`
-      )
-      window.open(`mailto:${tutor.email}?subject=${subject}&body=${body}`, '_blank')
+      // Já autenticado: adicionar favorito e ir para o perfil de aluno
+      supabase.from('student_favorites')
+        .insert({ student_user_id: user.id, tutor_id: tutorId })
+        .then(() => navigate('/dashboard/student-profile'))
     } else {
-      setPendingContact(tutor)
+      setPendingTutorId(tutorId)
       setShowAuthOverlay(true)
     }
   }
 
   //-----------------AUTH COMPLETE-----------------
   const handleAuthComplete = async (userId: string) => {
-    try {
-      const { data: tempData } = await supabase
-        .from('temp_students')
-        .select('*')
-        .eq('session_id', sessionId)
-        .single()
-      if (tempData) {
-        const { data: authData } = await supabase.auth.getUser()
-        const u = authData?.user
-        const { error } = await supabase.from('students').insert({
-          user_id: userId,
-          name: u?.user_metadata?.name || u?.email?.split('@')[0] || '',
-          email: u?.email || '',
-          question_1_answer: tempData.question_1_answer || '',
-          raw_answers: tempData.raw_answers || {},
-          subjects: tempData.raw_answers?.question_3_answer || [],
-        })
-        if (!error) {
-          await supabase.from('temp_students').delete().eq('session_id', sessionId)
-        }
-      }
-    } catch (err) {
-      console.warn('Aviso ao criar perfil:', err)
-    }
+    localStorage.setItem('tutmait_role', 'student')
+    supabase.auth.updateUser({ data: { role: 'student' } })
+    const chosenTutorId = pendingTutorId
     setShowAuthOverlay(false)
-    if (pendingContact) {
-      handleContact(pendingContact)
-      setPendingContact(null)
+    setPendingTutorId(null)
+    
+    // Mostramos o loading screen global para evitar que o overlay de auth fique "encravado"
+    // caso ocorra um re-render por parte do Supabase (onAuthStateChange)
+    setShowTuTmaiTLoading(true)
+    
+    // ATENÇÃO: É vital esperar que o perfil seja criado (com 'await')
+    // ANTES de navegar, caso contrário o ecrã do Perfil carrega
+    // mais depressa do que a base de dados guarda as respostas e fica em branco!
+    await createStudentProfile(userId, finalAnswersRef.current, chosenTutorId)
+
+    setShowTuTmaiTLoading(false)
+
+    if (chosenTutorId) {
+      navigate(`/profile/${chosenTutorId}`)
+    } else {
+      navigate('/dashboard/student-profile')
     }
   }
 
@@ -939,18 +973,25 @@ export const StudentQuestionnaire = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {matched.map((t) => (
                       <Card key={t.tutorId} className="p-6 flex flex-col gap-3">
+                        {t.profile_picture && (
+                          <img
+                            src={t.profile_picture}
+                            alt={t.name}
+                            className="w-16 h-16 rounded-full object-cover mx-auto"
+                          />
+                        )}
                         <div>
                           <h3 className="text-xl font-bold">{t.name}</h3>
-                          <p className="text-gray-600 text-sm">{t.subjects?.join(', ')}</p>
+                          <p className="text-muted-foreground text-sm">{t.subjects?.join(', ')}</p>
                         </div>
                         <span className="bg-student-yellow-light text-foreground text-xs font-semibold px-2.5 py-0.5 rounded self-start">
                           Match: {t.compatibility}%
                         </span>
                         <Button
-                          onClick={() => handleContact(t)}
+                          onClick={() => handleSelectTutor(t.tutorId)}
                           className="w-full mt-auto"
                         >
-                          <Mail className="w-4 h-4 mr-2" /> Contactar
+                          Escolher Explicador
                         </Button>
                       </Card>
                     ))}
@@ -967,13 +1008,13 @@ export const StudentQuestionnaire = () => {
             onClick={(e) => {
               if (e.target === e.currentTarget) {
                 setShowAuthOverlay(false)
-                setPendingContact(null)
+                setPendingTutorId(null)
               }
             }}
           >
             <div className="relative w-full max-w-sm">
               <button
-                onClick={() => { setShowAuthOverlay(false); setPendingContact(null) }}
+                onClick={() => { setShowAuthOverlay(false); setPendingTutorId(null) }}
                 className="absolute -top-3 -right-3 z-10 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-400 hover:text-gray-700 text-sm font-bold"
               >
                 ✕
@@ -982,8 +1023,8 @@ export const StudentQuestionnaire = () => {
                 modal
                 role="student"
                 onComplete={handleAuthComplete}
-                title="Inicia sessão para contactar"
-                subtitle={`Para contactar ${pendingContact?.name || 'o explicador'}, cria uma conta ou inicia sessão`}
+                title="Cria a tua conta de aluno"
+                subtitle="Regista-te gratuitamente para guardar o teu explicador e aceder ao teu perfil"
               />
             </div>
           </div>
@@ -994,6 +1035,28 @@ export const StudentQuestionnaire = () => {
 
   const question = questions[currentStep]
   const progress = ((currentStep + 1) / questions.length) * 100
+
+  if (user && userRole === 'tutor') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50 flex flex-col items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-border/50 p-8 text-center">
+          <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+            <span className="text-3xl">⚠️</span>
+          </div>
+          <h2 className="text-xl font-bold text-foreground mb-3">Conta já associada</h2>
+          <p className="text-muted-foreground mb-6">
+            Não podes ter conta de aluno e explicador na mesma conta. A tua conta já está registada como <strong>explicador</strong>.
+          </p>
+          <button
+            onClick={() => navigate('/dashboard/tutor-profile')}
+            className="w-full py-2 px-4 rounded-xl bg-primary text-white font-medium hover:bg-primary/90 transition-colors"
+          >
+            Ir para o meu perfil
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen py-8 bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50">
@@ -1056,7 +1119,9 @@ export const StudentQuestionnaire = () => {
           </motion.div>
         </AnimatePresence>
       </div>
-      <Footer />
+      <div className="mt-12">
+        <Footer />
+      </div>
     </div>
   )
 }

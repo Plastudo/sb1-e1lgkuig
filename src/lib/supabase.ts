@@ -59,3 +59,20 @@ export type StudentData = {
   created_at?: string;
   updated_at?: string;
 };
+
+export type StudentNote = {
+  id?: string;
+  student_user_id: string;
+  subject: string;
+  grade: string;
+  date: string;
+  notes?: string;
+  created_at?: string;
+};
+
+export type StudentFavorite = {
+  id?: string;
+  student_user_id: string;
+  tutor_id: string;
+  created_at?: string;
+};

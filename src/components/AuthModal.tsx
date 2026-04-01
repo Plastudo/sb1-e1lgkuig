@@ -28,9 +28,10 @@ interface AuthModalProps {
   subtitle?: string
   role?: 'student' | 'tutor'
   modal?: boolean
+  defaultSignIn?: boolean
 }
 
-export const AuthModal = ({ onComplete, title, subtitle, role = 'tutor', modal = false }: AuthModalProps) => {
+export const AuthModal = ({ onComplete, title, subtitle, role = 'tutor', modal = false, defaultSignIn = false }: AuthModalProps) => {
   const isStudent = role === 'student'
   const isTutor   = role === 'tutor'
 
@@ -44,31 +45,42 @@ export const AuthModal = ({ onComplete, title, subtitle, role = 'tutor', modal =
       ? 'inline-block px-3 py-1 rounded-full bg-tutor-green-light text-primary text-xs font-semibold mb-3'
       : ''
 
-  const [isSignUp, setIsSignUp] = useState(true)
+  const [isSignUp, setIsSignUp] = useState(!defaultSignIn)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
   const { signUp, signIn } = useAuth()
-
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 
 const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault()
   setLoading(true)
   setError('')
+  setSuccess('')
 
   let result: any // declarar fora do try
 
   try {
     if (isSignUp) {
-      result = await signUp(email, password)
+      result = await signUp(email, password, { name, role })
       const user = result.data?.user
+      const signUpError = result?.error
+
+      // Email já registado → mudar para login automaticamente
+      const alreadyExists = signUpError?.message?.toLowerCase().includes('already registered') ||
+                            signUpError?.message?.toLowerCase().includes('already been registered')
+      if (alreadyExists) {
+        setIsSignUp(false)
+        setError('Este email já tem conta. Inicia sessão.')
+        return
+      }
 
       if (user) {
+        // Conta criada com sucesso
         if (role === 'tutor') {
           const { error: insertError } = await supabase.from('tutores').insert({
             user_id: user.id,
@@ -77,19 +89,32 @@ const handleSubmit = async (e: React.FormEvent) => {
             question_1_answer: ''
           })
           if (insertError) throw insertError
+          setIsSignUp(false)
+          setSuccess('Conta criada! Por favor inicie sessão.')
+        } else {
+          // Para estudantes: desativar auto-login e forçar ecrã de login
+          setIsSignUp(false)
+          setSuccess('Conta criada com sucesso! Por favor inicie sessão para continuar.')
         }
-        setIsSignUp(false)
-        setError('')
-        alert('Conta criada com sucesso! Por favor inicie sessão.')
+      } else if (signUpError) {
+        // Falha real no registo
+        throw signUpError
       }
     } else {
       result = await signIn(email, password)
+      const signInError = result?.error
+
+      if (signInError?.message?.toLowerCase().includes('email not confirmed')) {
+        setError('Confirma o teu email antes de entrar. Verifica a tua caixa de entrada.')
+        return
+      }
+
+      if (signInError) throw signInError
+
       if (result.data?.user) {
         onComplete(result.data.user.id)
       }
     }
-
-    if (result?.error) throw result.error
   } catch (error: any) {
     setError(error.message || 'Ocorreu um erro. Tente novamente.')
   } finally {
@@ -120,11 +145,14 @@ const handleSubmit = async (e: React.FormEvent) => {
             </p>
           </div>
 
+          {success && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+              <p className="text-green-700 text-sm">{success}</p>
+            </div>
+          )}
           {error && (
-            // Se existir uma mensagem de erro
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
               <p className="text-red-600 text-sm">{error}</p>
-              {/* Mostra o texto do erro */}
             </div>
           )}
 
@@ -229,6 +257,7 @@ const handleSubmit = async (e: React.FormEvent) => {
               onClick={() => {
                 setIsSignUp(!isSignUp)
                 setError('')
+                setSuccess('')
               }}
               className={linkClass}
             >

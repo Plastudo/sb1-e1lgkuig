@@ -12,6 +12,7 @@ import { Calendar, Monitor, Home, Target, MapPin } from 'lucide-react'
 import { GripVertical } from 'lucide-react'
 import { getDistritos, getMunicipiosByDistrito, getFreguesiasByMunicipio } from '../data/locationMap'
 import { Footer } from './Footer'
+import { useAuth } from '../contexts/AuthContext'
 type CardsQuestion = {
   id: number
   type: 'cards'
@@ -377,6 +378,7 @@ export const TutorQuestionnaire = () => {
   const [sessionId] = useState(() => crypto.randomUUID())
   const [showAuth, setShowAuth] = useState(false)
   const navigate = useNavigate()
+  const { user, userRole } = useAuth()
 
   //-----------------HANDLE ANSWER-----------------
   const handleAnswer = async (questionId: number, answer: any) => {
@@ -455,12 +457,14 @@ export const TutorQuestionnaire = () => {
 
       // Limpar temp_tutores em background
       supabase.from('temp_tutores').delete().eq('session_id', sessionId)
+      supabase.auth.updateUser({ data: { role: 'tutor' } })
+      localStorage.setItem('tutmait_role', 'tutor')
 
     } catch (error: any) {
       console.error('❌ ERRO AO COMPLETAR REGISTO', error)
       alert(`Erro ao guardar perfil: ${error?.message || error}`)
     } finally {
-      navigate('/profile')
+      navigate('/dashboard/tutor-profile')
     }
   }
 
@@ -939,6 +943,28 @@ const renderQuestionContent = (question: Question): React.ReactNode => {
   const question = questions[currentStep]
   const progress = ((currentStep + 1) / questions.length) * 100
   const currentAnswer = answers[`question_${question.id}_answer`]
+
+  if (user && userRole === 'student') {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-border/50 p-8 text-center">
+          <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+            <span className="text-3xl">⚠️</span>
+          </div>
+          <h2 className="text-xl font-bold text-foreground mb-3">Conta já associada</h2>
+          <p className="text-muted-foreground mb-6">
+            Não podes ter conta de aluno e explicador na mesma conta. A tua conta já está registada como <strong>aluno</strong>.
+          </p>
+          <button
+            onClick={() => navigate('/dashboard/student-profile')}
+            className="w-full py-2 px-4 rounded-xl bg-accent text-white font-medium hover:bg-accent/90 transition-colors"
+          >
+            Ir para o meu perfil
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

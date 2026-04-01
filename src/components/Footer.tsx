@@ -20,8 +20,8 @@ export const Footer = () => {
             <div className="flex flex-col gap-2 text-sm text-white/50">
               <span className="flex items-center gap-2">
                 <Mail className="h-4 w-4" />
-                <a href="mailto:hello@tutmaid.pt" className="hover:text-white transition-colors">
-                  hello@tutmaid.pt
+                <a href="mailto:hello@tutmait.pt" className="hover:text-white transition-colors">
+                  hello@tutmait.pt
                 </a>
               </span>
               <span className="flex items-center gap-2">

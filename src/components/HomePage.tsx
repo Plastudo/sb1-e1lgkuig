@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Button } from './ui/button'
 import {
@@ -9,8 +9,8 @@ import {
 } from 'lucide-react'
 import { Footer } from './Footer'
 import heroIllustration from '../assets/hero-illustration.png'
-import tutorTeaching from '../assets/tutor-teaching.png'
-import criancaSentada from '../assets/crianca-sentada.png'
+import tutorTeaching from '../assets/tutor-teaching-nobg.png'
+import criancaSentada from '../assets/crianca-sentada-nobg.png'
 
 /* ── constants ─────────────────────────────────────────────── */
 const NAVBAR_H = 64 // px — matches h-16
@@ -19,7 +19,7 @@ const fadeUp = {
   hidden: { opacity: 0, y: 28 },
   visible: (i = 0) => ({
     opacity: 1, y: 0,
-    transition: { duration: 0.55, delay: i * 0.1, ease: [0.4, 0, 0.2, 1] },
+    transition: { duration: 0.55, delay: i * 0.1 },
   }),
 }
 
@@ -56,7 +56,7 @@ const TUTOR_BENEFITS = [
 ]
 
 const ROADMAP = [
-  { icon: MessageCircle, title: 'Chat integrado',         desc: 'Fala directamente com o teu explicador dentro da plataforma, sem sair do TuTmait.',                              status: 'Brevemente' },
+  { icon: MessageCircle, title: 'Chat integrado',         desc: 'Fala directamente com o teu explicador dentro da plataforma, sem sair da TuTmait.',                              status: 'Brevemente' },
   { icon: CreditCard,    title: 'Pagamentos no chat',     desc: 'Paga as tuas sessões de forma segura directamente no chat — sem transferências nem dinheiro.',                   status: 'A seguir' },
   { icon: Calendar,      title: 'Agendamento automático', desc: 'Marca sessões com um clique, com sincronização automática de disponibilidade em tempo real.',                    status: 'Em desenvolvimento' },
   { icon: FileText,      title: 'Conteúdo próprio',       desc: 'Fichas, resumos e exercícios criados pelos explicadores, disponíveis directamente na plataforma.',              status: 'No roadmap' },
@@ -161,7 +161,7 @@ export const HomePage = () => {
           slideDir === 'left'  ? { x: '-100vw', opacity: 0 } :
           { x: 0, opacity: 1 }
         }
-        transition={{ duration: 0.52, ease: [0.4, 0, 0.2, 1] }}
+        transition={{ duration: 0.52 }}
       >
         {/* Scroll container */}
         <div
@@ -174,10 +174,11 @@ export const HomePage = () => {
             scrollBehavior: 'smooth',
           }}
         >
+          <div className="relative">
 
           {/* ── 1. HERO ─────────────────────────────────────── */}
           <section data-s="0" style={{ ...sectionStyleTop, scrollSnapAlign: 'start' }}
-            className="relative overflow-hidden"
+            className="relative overflow-hidden z-10"
           >
             <div className="max-w-7xl mx-auto px-6 lg:px-8 w-full pb-10">
               {/* Reduced gap: gap-8 instead of gap-16 */}
@@ -195,7 +196,7 @@ export const HomePage = () => {
                     variants={fadeUp} initial="hidden" animate="visible" custom={1}
                     className="text-xl text-muted-foreground leading-relaxed"
                   >
-                    Liga-te ao explicador ideal para o teu sucesso académico
+                    Liga-te ao explicador ideal e começa a estudar melhor com aulas particulares à tua medida.
                   </motion.p>
 
                   <motion.div variants={fadeUp} initial="hidden" animate="visible" custom={2}>
@@ -212,7 +213,7 @@ export const HomePage = () => {
                 <motion.div
                   initial={{ opacity: 0, scale: 0.93 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
+                  transition={{ duration: 0.8 }}
                   className="relative flex items-center justify-center"
                 >
                   <div className="absolute w-72 h-72 rounded-full animate-pulse-soft"
@@ -230,7 +231,7 @@ export const HomePage = () => {
 
           {/* ── 2. COMO FUNCIONA ────────────────────────────── */}
           <section data-s="1" style={{ ...sectionStyle, scrollSnapAlign: 'start' }}
-            className="relative bg-muted/55 overflow-hidden"
+            className="relative bg-muted/55 overflow-hidden z-10"
           >
             <div className="max-w-7xl mx-auto px-6 lg:px-8 w-full py-16">
               <motion.div variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
@@ -240,8 +241,7 @@ export const HomePage = () => {
                   Como funciona?
                 </h2>
                 <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                  Da primeira pesquisa à primeira aula, o processo é simples, rápido e sem complicações.
-                  Em menos de 5 minutos encontras o teu explicador ideal.
+                  Procura apoio escolar ou explicações? O processo é simples, rápido e focado em si. Em menos de 5 minutos encontra o explicador ideal.
                 </p>
               </motion.div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
@@ -259,12 +259,20 @@ export const HomePage = () => {
                   </motion.div>
                 ))}
               </div>
+
+              {/* Section 2 CTA button added */}
+              <motion.div variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mt-14 text-center">
+                <Button size="lg" onClick={handleStudentCTA} className="text-base px-8 py-5 bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg hover:shadow-xl transition-all duration-200 group">
+                  Encontre o explicador ideal
+                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </motion.div>
             </div>
           </section>
 
           {/* ── 3. PARA ESTUDANTES ──────────────────────────── */}
           <section data-s="2" style={{ ...sectionStyleTop, scrollSnapAlign: 'start', paddingTop: '3vh', paddingBottom: '3vh' }}
-            className="relative overflow-hidden"
+            className="relative overflow-hidden z-10"
           >
             <div className="max-w-7xl mx-auto px-6 lg:px-8 w-full">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
@@ -276,11 +284,10 @@ export const HomePage = () => {
                       Para estudantes
                     </span>
                     <h2 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-foreground mb-4">
-                      Apoio escolar{' '}<span className="text-gradient">personalizado</span>
+                      Apoio escolar e <span className="text-gradient">aulas particulares</span>
                     </h2>
                     <p className="text-lg text-muted-foreground leading-relaxed">
-                      Das explicações de Matemática ao apoio em Português, Inglês ou Ciências —
-                      encontra o explicador certo para as tuas aulas particulares.
+                      Das explicações de Matemática ao apoio em Português ou Ciências — garanta o sucesso escolar estudando com o explicador ideal para as suas necessidades.
                     </p>
                   </div>
                   <ul className="space-y-3">
@@ -306,9 +313,8 @@ export const HomePage = () => {
 
                 <motion.div
                   initial={{ y: 24 }} whileInView={{ y: 0 }} viewport={{ once: true }}
-                  transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+                  transition={{ duration: 0.6 }}
                   className="relative flex items-center justify-center"
-                  style={{ mixBlendMode: 'multiply', background: 'white' }}
                 >
                   <img src={criancaSentada} alt="Estudante a estudar com apoio escolar da TuTmait"
                     className="w-full max-w-md"
@@ -320,15 +326,14 @@ export const HomePage = () => {
 
           {/* ── 4. PARA EXPLICADORES ────────────────────────── */}
           <section data-s="3" style={{ ...sectionStyle, scrollSnapAlign: 'start' }}
-            className="relative bg-muted/55 overflow-hidden"
+            className="relative bg-muted/55 overflow-hidden z-10"
           >
             <div className="max-w-6xl mx-auto px-6 lg:px-8 w-full py-6">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-center">
                 <motion.div
                   initial={{ y: 24 }} whileInView={{ y: 0 }} viewport={{ once: true }}
-                  transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+                  transition={{ duration: 0.6 }}
                   className="relative flex items-center justify-center order-2 lg:order-1"
-                  style={{ mixBlendMode: 'multiply', background: 'white' }}
                 >
                   <img src={tutorTeaching} alt="Explicador a dar aulas particulares — TuTmait"
                     className="w-full max-w-sm"
@@ -372,20 +377,20 @@ export const HomePage = () => {
 
           {/* ── 5. ROADMAP ──────────────────────────────────── */}
           <section data-s="4" style={{ ...sectionStyle, scrollSnapAlign: 'start' }}
-            className="relative overflow-hidden"
+            className="relative overflow-hidden z-10"
           >
             <div className="max-w-3xl mx-auto px-6 lg:px-8 w-full py-10">
               <motion.div
                 initial={{ opacity: 0, y: 32 }}
                 animate={activeSection === 4 ? { opacity: 1, y: 0 } : { opacity: 0, y: 32 }}
-                transition={{ duration: 0.65, ease: [0.4, 0, 0.2, 1] }}
+                transition={{ duration: 0.65 }}
                 className="text-center mb-10"
               >
                 <span className="inline-block px-4 py-1.5 rounded-full bg-tutor-green-light text-tutor-green text-sm font-semibold mb-3">
                   O que vem a seguir
                 </span>
                 <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground mb-3">
-                  O futuro do <span className="text-gradient">TuTmait</span>
+                  O futuro da <span className="text-gradient">TuTmait</span>
                 </h2>
                 <p className="text-base text-muted-foreground max-w-lg mx-auto">
                   Estamos a construir uma plataforma completa. Aqui está o que está a chegar.
@@ -401,7 +406,7 @@ export const HomePage = () => {
                     ? { scaleY: 1, opacity: 1 }
                     : { scaleY: 0, opacity: 0 }
                   }
-                  transition={{ duration: 1.1, ease: [0.4, 0, 0.2, 1], delay: 0.15 }}
+                  transition={{ duration: 1.1, delay: 0.15 }}
                 />
 
                 <div className="space-y-10">
@@ -470,10 +475,11 @@ export const HomePage = () => {
           </section>
 
           {/* ── FOOTER ──────────────────────────────────────── */}
-          <div style={{ scrollSnapAlign: 'start' }}>
+          <div style={{ scrollSnapAlign: 'start' }} className="relative z-10 bg-white">
             <Footer />
           </div>
 
+          </div>{/* end inner relative wrapper */}
         </div>{/* end scroll container */}
       </motion.div>
     </>

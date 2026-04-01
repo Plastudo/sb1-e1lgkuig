@@ -1,4 +1,3 @@
-import React from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from './button'
 import { useAuth } from '../../contexts/AuthContext'
@@ -11,13 +10,18 @@ const scrollTo = (sectionIndex: number) => {
 }
 
 export const Navbar = () => {
-  const { user, signOut } = useAuth()
+  const { user, userRole, signOut } = useAuth()
   const navigate = useNavigate()
 
   const handleSignOut = async () => {
     await signOut()
     navigate('/')
   }
+
+  const resolvedRole = userRole || (localStorage.getItem('tutmait_role') as 'student' | 'tutor' | null)
+  const profilePath = resolvedRole === 'student' ? '/dashboard/student-profile' : 
+                      resolvedRole === 'tutor' ? '/dashboard/tutor-profile' : 
+                      '/dashboard'
 
   return (
     <motion.nav
@@ -66,7 +70,7 @@ export const Navbar = () => {
 
             {user ? (
               <>
-                <Link to="/profile">
+                <Link to={profilePath}>
                   <Button
                     variant="ghost"
                     size="sm"

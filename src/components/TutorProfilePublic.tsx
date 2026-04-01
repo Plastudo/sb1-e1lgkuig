@@ -1,14 +1,15 @@
-import { useEffect, useState } from "react"
+import React, { useEffect, useState, useRef } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
 import { supabase } from "../lib/supabase"
+import { useAuth } from "../contexts/AuthContext"
 import { Card, CardContent } from "./ui/card"
 import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
 import {
   GraduationCap, Euro, MapPin, Monitor, BookOpen,
   Users, Gamepad2, Heart, Calendar, Briefcase, Lightbulb,
-  Mail, Star, CheckCircle2, Home, Video, Clock
+  Mail, Star, CheckCircle2, Home, Video, Clock, X, Send
 } from "lucide-react"
 
 type PublicTutor = {
@@ -84,9 +85,21 @@ const SCHED_SLOTS = ["Manhã", "Tarde", "Noite"] as const
 export const TutorProfilePublic = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [tutor, setTutor] = useState<PublicTutor | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isFavorite, setIsFavorite] = useState(false)
+  const [toggling, setToggling] = useState(false)
+  const [showContactModal, setShowContactModal] = useState(false)
+  const [contactSent, setContactSent] = useState(false)
+  const timeoutRef = useRef<any>(null)
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    }
+  }, [])
 
   useEffect(() => {
     if (!id) { setError("ID inválido"); setLoading(false); return }
@@ -105,6 +118,36 @@ export const TutorProfilePublic = () => {
 
     fetchTutor()
   }, [id])
+
+  useEffect(() => {
+    if (!user || !id) { setIsFavorite(false); return }
+    supabase
+      .from("student_favorites")
+      .select("id")
+      .eq("student_user_id", user.id)
+      .eq("tutor_id", id)
+      .maybeSingle()
+      .then(({ data }) => setIsFavorite(!!data))
+  }, [user, id])
+
+  const toggleFavorite = async () => {
+    if (!user || !id || toggling) return
+    setToggling(true)
+    if (isFavorite) {
+      await supabase
+        .from("student_favorites")
+        .delete()
+        .eq("student_user_id", user.id)
+        .eq("tutor_id", id)
+      setIsFavorite(false)
+    } else {
+      await supabase
+        .from("student_favorites")
+        .insert({ student_user_id: user.id, tutor_id: id })
+      setIsFavorite(true)
+    }
+    setToggling(false)
+  }
 
   if (loading) {
     return (
@@ -185,7 +228,19 @@ export const TutorProfilePublic = () => {
   const hasSchedule = Object.values(schedule).some(v => v === true)
 
   const handleContact = () => {
-    window.location.href = `mailto:${tutor.email}?subject=Pedido de Aula via Plastudo`
+    setShowContactModal(true)
+  }
+
+  const confirmContact = () => {
+    setContactSent(true)
+    timeoutRef.current = setTimeout(() => {
+      setShowContactModal(false)
+      setContactSent(false)
+      const a = document.createElement('a')
+      a.href = `mailto:${tutor.email}?subject=${encodeURIComponent('Pedido de Aula via TuTmait')}`
+      a.target = '_blank'
+      a.click()
+    }, 2000)
   }
 
   return (
@@ -285,13 +340,26 @@ export const TutorProfilePublic = () => {
                 </div>
               )}
 
-              {/* Botão de contacto */}
-              <Button
-                onClick={handleContact}
-                className="w-full mt-6 py-5 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-md hover:shadow-lg transition-all"
-              >
-                <Mail className="w-4 h-4 mr-2" /> Marcar Aula
-              </Button>
+              {/* Botões de ação */}
+              <div className="flex gap-3 mt-6">
+                <Button
+                  onClick={handleContact}
+                  className="flex-1 py-5 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-md hover:shadow-lg transition-all"
+                >
+                  <Mail className="w-4 h-4 mr-2" /> Marcar Aula
+                </Button>
+                {user && (
+                  <Button
+                    variant="outline"
+                    onClick={toggleFavorite}
+                    disabled={toggling}
+                    className={`px-4 py-5 rounded-xl border-2 transition-all ${isFavorite ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:border-primary hover:text-primary'}`}
+                    title={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                  >
+                    <Heart className={`w-5 h-5 ${isFavorite ? 'fill-primary' : ''}`} />
+                  </Button>
+                )}
+              </div>
               <p className="text-xs text-center text-muted-foreground mt-3">Resposta habitualmente em poucas horas</p>
             </CardContent>
           </Card>
@@ -389,8 +457,8 @@ export const TutorProfilePublic = () => {
                         </div>
                       ))}
                       {SCHED_SLOTS.map((slot) => (
-                        <>
-                          <div key={`label-${slot}`} className="text-xs text-muted-foreground flex items-center justify-end pr-3">
+                        <React.Fragment key={`label-group-${slot}`}>
+                          <div className="text-xs text-muted-foreground flex items-center justify-end pr-3">
                             {slot}
                           </div>
                           {SCHED_DAYS.map((day) => {
@@ -402,7 +470,7 @@ export const TutorProfilePublic = () => {
                               />
                             )
                           })}
-                        </>
+                        </React.Fragment>
                       ))}
                     </div>
                     <div className="flex items-center gap-4 mt-4 text-xs text-muted-foreground">
@@ -434,6 +502,62 @@ export const TutorProfilePublic = () => {
         )}
 
       </div>
+
+      {/* ── Contact Modal ─────────────────────────────────────────────── */}
+      {showContactModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowContactModal(false)} />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="relative w-full max-w-sm bg-white rounded-2xl shadow-2xl p-6 z-10 text-center"
+          >
+            <button
+              onClick={() => setShowContactModal(false)}
+              className="absolute right-4 top-4 p-2 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+
+            {contactSent ? (
+              <div className="py-8 space-y-4">
+                <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle2 className="w-8 h-8" />
+                </div>
+                <h3 className="text-xl font-bold text-foreground">A conectar...</h3>
+                <p className="text-muted-foreground text-sm">
+                  Vamos abrir o teu gestor de email para entrares em contacto direto.
+                </p>
+              </div>
+            ) : (
+              <div className="py-4">
+                <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-5">
+                  <Mail className="w-8 h-8" />
+                </div>
+                <h3 className="text-xl font-bold text-foreground mb-2">Marcar Aula</h3>
+                <p className="text-muted-foreground text-sm mb-8">
+                  Desejas enviar um pedido de contacto para <strong>{tutor.name}</strong>?
+                </p>
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowContactModal(false)}
+                    className="flex-1 rounded-xl"
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={confirmContact}
+                    className="flex-1 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90"
+                  >
+                    <Send className="w-4 h-4 mr-2" /> Avançar
+                  </Button>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        </div>
+      )}
     </div>
   )
 }

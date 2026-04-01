@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react'
+import { ProfilePictureUpload } from './ui/ProfilePictureUpload'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Card, CardContent } from './ui/card'
@@ -92,17 +93,9 @@ export const TutorProfile = () => {
 
           if (ownData?.id) {
             targetId = ownData.id
-          } else if (ownError && ownError.code === 'PGRST116') {
-            const { data: newTutor, error: insertError } = await supabase
-              .from('tutores')
-              .insert({
-                user_id: user.id,
-                name: user.user_metadata?.name || user.email?.split('@')[0] || 'Utilizador',
-                email: user.email || '',
-                raw_answers: {}
-              })
-              .select('id').single()
-            if (!insertError && newTutor) targetId = newTutor.id
+          } else {
+            navigate('/marketplace')
+            return
           }
         }
 
@@ -147,40 +140,21 @@ export const TutorProfile = () => {
     }
   }
 
-  // 🔹 Upload da Imagem de Perfil (base64 direto na tabela)
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 🔹 Upload da Imagem de Perfil — chamado pelo ProfilePictureUpload após processamento
+  const handleProcessedPhoto = async (base64: string) => {
+    if (!tutor || !isOwner) return
     try {
-      if (!e.target.files || e.target.files.length === 0 || !tutor || !isOwner) return
-      const file = e.target.files[0]
-
-      // Limita a 2MB
-      if (file.size > 2 * 1024 * 1024) {
-        alert('A imagem não pode ter mais de 2MB.')
-        return
-      }
-
       setUploadingImage(true)
-
-      // Converte para base64
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve(reader.result as string)
-        reader.onerror = reject
-        reader.readAsDataURL(file)
-      })
-
       const { error } = await supabase
         .from('tutores')
         .update({ profile_picture: base64 })
         .eq('id', tutor.id)
-
       if (error) throw error
-
       setTutor({ ...tutor, profile_picture: base64 })
       setEditData(prev => ({ ...prev, profile_picture: base64 }))
-    } catch (error: any) {
-      console.error('Error uploading image:', error)
-      alert(`Erro ao guardar imagem: ${error?.message || error}`)
+    } catch (err: any) {
+      console.error('Error saving image:', err)
+      alert(`Erro ao guardar imagem: ${err?.message || err}`)
     } finally {
       setUploadingImage(false)
     }
@@ -192,7 +166,10 @@ export const TutorProfile = () => {
     const body = encodeURIComponent(
       `Olá ${tutor.name},\n\nEncontrei o seu perfil na Plastudo e estou interessado(a) nas suas explicações.\n\nPodemos conversar sobre disponibilidade e condições?\n\nObrigado(a)!`
     )
-    window.location.href = `mailto:${tutor.email}?subject=${subject}&body=${body}`
+    const a = document.createElement('a')
+    a.href = `mailto:${tutor.email}?subject=${subject}&body=${body}`
+    a.target = '_blank'
+    a.click()
   }
 
   // ── Loading / Not Found ──────────────────────────────────────────────────
@@ -338,30 +315,19 @@ export const TutorProfile = () => {
             <CardContent className="p-6 sm:p-8">
               <div className="flex flex-col sm:flex-row gap-6 items-start">
 
-                {/* Avatar */}
-                <div className="relative group shrink-0">
-                  <img
-                    src={currentData.profile_picture || '/default-avatar.svg'}
-                    alt={currentData.name}
-                    className={`w-24 h-24 rounded-full object-cover ring-4 ring-accent/30 shadow-lg transition-all ${isEditing ? 'group-hover:opacity-60' : ''}`}
-                  />
-                  {isEditing && (
-                    <>
-                      <div
-                        className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 rounded-full cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        {uploadingImage
-                          ? <Loader2 className="w-7 h-7 text-white animate-spin" />
-                          : <Camera className="w-8 h-8 text-white" />
-                        }
-                        <span className="text-white text-[10px] font-semibold mt-1">Alterar</span>
-                      </div>
-                      <input
-                        type="file" ref={fileInputRef} className="hidden"
-                        accept="image/*" onChange={handleImageUpload} disabled={uploadingImage}
-                      />
-                    </>
+                {/* Avatar / Upload */}
+                <div className="shrink-0">
+                  {isEditing ? (
+                    <ProfilePictureUpload
+                      currentImage={currentData.profile_picture || undefined}
+                      onProcessed={handleProcessedPhoto}
+                    />
+                  ) : (
+                    <img
+                      src={currentData.profile_picture || '/default-avatar.svg'}
+                      alt={currentData.name}
+                      className="w-24 h-24 rounded-full object-cover object-top ring-4 ring-accent/30 shadow-lg"
+                    />
                   )}
                 </div>
 

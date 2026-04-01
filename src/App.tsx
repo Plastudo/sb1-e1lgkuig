@@ -8,6 +8,8 @@ import { Marketplace } from './components/Marketplace'
 import { TutorProfile } from './components/TutorProfile'
 import { Login } from './components/Login'
 import { TutorProfilePublic } from './components/TutorProfilePublic'
+import { StudentProfile } from './components/StudentProfile'
+import { DashboardRouter } from './components/DashboardRouter'
 
 function App() {
   return (
@@ -20,7 +22,9 @@ function App() {
             <Route path="/tutor-questionnaire" element={<TutorQuestionnaire />} />
             <Route path="/student-questionnaire" element={<StudentQuestionnaire />} />
             <Route path="/marketplace" element={<Marketplace />} />
+            <Route path="/dashboard" element={<DashboardRouter />} />
             <Route path="/dashboard/tutor-profile" element={<TutorProfile />} />
+            <Route path="/dashboard/student-profile" element={<StudentProfile />} />
             <Route path="/profile/:id" element={<TutorProfilePublic />} />
             <Route path="/profile" element={<TutorProfile />} />
             <Route path="/login" element={<Login />} />
