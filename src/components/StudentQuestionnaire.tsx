@@ -1109,7 +1109,7 @@ export const StudentQuestionnaire = () => {
                     }
                   }}
                   disabled={isNextDisabled()}
-                  className="bg-accent hover:bg-accent/90 text-foreground"
+                  variant="accent"
                 >
                   {loading ? 'A calcular matches...' : questions[currentStep].type === 'priority-ranking' ? 'Ver os meus matches' : 'Seguinte'}
                   {!loading && questions[currentStep].type !== 'priority-ranking' && <ChevronRight className="h-4 w-4" />}

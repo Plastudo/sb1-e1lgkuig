@@ -287,7 +287,8 @@ export const TutorProfile = () => {
                     </Button>
                     <Button
                       onClick={handleSave}
-                      className="rounded-xl bg-accent text-accent-foreground hover:bg-accent/90 font-semibold"
+                      variant="accent"
+                      className="rounded-xl font-semibold"
                     >
                       <Save className="w-4 h-4 mr-1" /> Guardar
                     </Button>

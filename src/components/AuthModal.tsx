@@ -35,9 +35,7 @@ export const AuthModal = ({ onComplete, title, subtitle, role = 'tutor', modal =
   const isStudent = role === 'student'
   const isTutor   = role === 'tutor'
 
-  const btnClass   = isStudent
-    ? 'w-full bg-accent hover:bg-accent/90 text-foreground font-semibold'
-    : 'w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold'
+  const btnVariant = isStudent ? 'accent' : 'default'
   const linkClass  = isStudent ? 'text-accent hover:text-accent/80' : 'text-primary hover:text-primary/80'
   const badgeClass = isStudent
     ? 'inline-block px-3 py-1 rounded-full bg-student-yellow-light text-foreground text-xs font-semibold mb-3'
@@ -232,7 +230,8 @@ const handleSubmit = async (e: React.FormEvent) => {
 
             <Button
               type="submit"
-              className={btnClass}
+              variant={btnVariant as any}
+              className="w-full font-semibold"
               disabled={loading}
             >
               {loading ? (

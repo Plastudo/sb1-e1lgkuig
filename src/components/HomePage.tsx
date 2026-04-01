@@ -200,8 +200,8 @@ export const HomePage = () => {
                   </motion.p>
 
                   <motion.div variants={fadeUp} initial="hidden" animate="visible" custom={2}>
-                    <Button size="lg" onClick={handleStudentCTA}
-                      className="text-base px-9 py-6 bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg hover:shadow-xl transition-all duration-200 group"
+                    <Button size="lg" variant="accent" onClick={handleStudentCTA}
+                      className="text-base px-9 py-6 shadow-lg hover:shadow-xl transition-all duration-200 group"
                     >
                       <Search className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" />
                       Encontre o explicador ideal
@@ -262,7 +262,7 @@ export const HomePage = () => {
 
               {/* Section 2 CTA button added */}
               <motion.div variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }} className="mt-14 text-center">
-                <Button size="lg" onClick={handleStudentCTA} className="text-base px-8 py-5 bg-accent hover:bg-accent/90 text-accent-foreground shadow-lg hover:shadow-xl transition-all duration-200 group">
+                <Button size="lg" variant="accent" onClick={handleStudentCTA} className="text-base px-8 py-5 shadow-lg hover:shadow-xl transition-all duration-200 group">
                   Encontre o explicador ideal
                   <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                 </Button>
@@ -303,8 +303,8 @@ export const HomePage = () => {
                       </motion.li>
                     ))}
                   </ul>
-                  <Button size="lg" onClick={handleStudentCTA}
-                    className="text-base px-8 py-5 bg-accent hover:bg-accent/90 text-accent-foreground group"
+                  <Button size="lg" variant="accent" onClick={handleStudentCTA}
+                    className="text-base px-8 py-5 group"
                   >
                     Encontrar o meu explicador
                     <ArrowRight className="ml-1 h-4 w-4 group-hover:translate-x-1 transition-transform" />

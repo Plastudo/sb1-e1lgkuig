@@ -607,7 +607,8 @@ export const StudentProfile = () => {
                 <Button
                   size="sm"
                   onClick={openAddNote}
-                  className="bg-accent hover:bg-accent/90 text-foreground rounded-xl gap-1.5"
+                  variant="accent"
+                  className="rounded-xl gap-1.5"
                 >
                   <Plus className="w-4 h-4" />
                   Adicionar nota
@@ -682,7 +683,8 @@ export const StudentProfile = () => {
                           size="sm"
                           onClick={saveNote}
                           disabled={savingNote || !noteForm.subject || !noteForm.grade || !noteForm.date}
-                          className="bg-accent hover:bg-accent/90 text-foreground rounded-xl"
+                          variant="accent"
+                          className="rounded-xl"
                         >
                           {savingNote ? 'A guardar...' : 'Guardar'}
                         </Button>
