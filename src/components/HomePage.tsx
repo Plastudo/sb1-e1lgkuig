@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { Button } from './ui/button'
@@ -67,59 +67,17 @@ export const HomePage = () => {
   const navigate = useNavigate()
   const [slideDir, setSlideDir] = useState<'left' | 'right' | null>(null)
   const [activeSection, setActiveSection] = useState(0)
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const isSnapping = useRef(false)
-
   /* Section dot tracker */
   useEffect(() => {
-    const container = scrollRef.current
-    if (!container) return
-    const sections = container.querySelectorAll('section[data-s]')
+    const sections = document.querySelectorAll('section[data-s]')
     const obs = new IntersectionObserver(
       entries => entries.forEach(e => {
         if (e.isIntersecting) setActiveSection(Number((e.target as HTMLElement).dataset.s))
       }),
-      { root: container, threshold: 0.4 },
+      { threshold: 0.4 },
     )
     sections.forEach(s => obs.observe(s))
     return () => obs.disconnect()
-  }, [])
-
-  /* Wheel-based section snap */
-  useEffect(() => {
-    const container = scrollRef.current
-    if (!container) return
-
-    const getSections = () =>
-      Array.from(container.querySelectorAll('section[data-s]')) as HTMLElement[]
-
-    const onWheel = (e: WheelEvent) => {
-      if (isSnapping.current) { e.preventDefault(); return }
-
-      const sections = getSections()
-      // Find section whose top is closest to 0 within the container
-      const current = sections.reduce((best, sec, i) => {
-        const top = sec.getBoundingClientRect().top - container.getBoundingClientRect().top
-        return Math.abs(top) < Math.abs(sections[best].getBoundingClientRect().top - container.getBoundingClientRect().top)
-          ? i : best
-      }, 0)
-
-      const dir = e.deltaY > 0 ? 1 : -1
-      const next = Math.max(0, Math.min(sections.length - 1, current + dir))
-
-      // At last section scrolling down → let natural scroll reach the footer
-      if (current === sections.length - 1 && dir === 1) return
-
-      if (next !== current) {
-        e.preventDefault()
-        isSnapping.current = true
-        sections[next].scrollIntoView({ behavior: 'smooth', block: 'start' })
-        setTimeout(() => { isSnapping.current = false }, 900)
-      }
-    }
-
-    container.addEventListener('wheel', onWheel, { passive: false })
-    return () => container.removeEventListener('wheel', onWheel)
   }, [])
 
   const handleStudentCTA = () => {
@@ -163,21 +121,11 @@ export const HomePage = () => {
         }
         transition={{ duration: 0.52 }}
       >
-        {/* Scroll container */}
-        <div
-          ref={scrollRef}
-          style={{
-            height: `calc(100vh - ${NAVBAR_H}px)`,
-            overflowY: 'scroll',
-            overflowX: 'hidden',
-            scrollSnapType: 'y mandatory',
-            scrollBehavior: 'smooth',
-          }}
-        >
+        <div>
           <div className="relative">
 
           {/* ── 1. HERO ─────────────────────────────────────── */}
-          <section data-s="0" style={{ ...sectionStyleTop, scrollSnapAlign: 'start' }}
+          <section data-s="0" style={{ ...sectionStyleTop }}
             className="relative overflow-hidden z-10"
           >
             <div className="max-w-7xl mx-auto px-6 lg:px-8 w-full pb-10">
@@ -196,7 +144,7 @@ export const HomePage = () => {
                     variants={fadeUp} initial="hidden" animate="visible" custom={1}
                     className="text-xl text-muted-foreground leading-relaxed"
                   >
-                    Liga-te ao explicador ideal e começa a estudar melhor com aulas particulares à tua medida.
+                    Aprenda ao seu ritmo, no seu tempo, com quem entende as suas necessidades.
                   </motion.p>
 
                   <motion.div variants={fadeUp} initial="hidden" animate="visible" custom={2}>
@@ -230,7 +178,7 @@ export const HomePage = () => {
           </section>
 
           {/* ── 2. COMO FUNCIONA ────────────────────────────── */}
-          <section data-s="1" style={{ ...sectionStyle, scrollSnapAlign: 'start' }}
+          <section data-s="1" style={{ ...sectionStyle, scrollSnapAlign: undefined }}
             className="relative bg-muted/55 overflow-hidden z-10"
           >
             <div className="max-w-7xl mx-auto px-6 lg:px-8 w-full py-16">
@@ -271,7 +219,7 @@ export const HomePage = () => {
           </section>
 
           {/* ── 3. PARA ESTUDANTES ──────────────────────────── */}
-          <section data-s="2" style={{ ...sectionStyleTop, scrollSnapAlign: 'start', paddingTop: '3vh', paddingBottom: '3vh' }}
+          <section data-s="2" style={{ ...sectionStyleTop, scrollSnapAlign: undefined, paddingTop: '3vh', paddingBottom: '3vh' }}
             className="relative overflow-hidden z-10"
           >
             <div className="max-w-7xl mx-auto px-6 lg:px-8 w-full">
@@ -325,7 +273,7 @@ export const HomePage = () => {
           </section>
 
           {/* ── 4. PARA EXPLICADORES ────────────────────────── */}
-          <section data-s="3" style={{ ...sectionStyle, scrollSnapAlign: 'start' }}
+          <section data-s="3" style={{ ...sectionStyle, scrollSnapAlign: undefined }}
             className="relative bg-muted/55 overflow-hidden z-10"
           >
             <div className="max-w-6xl mx-auto px-6 lg:px-8 w-full py-6">
@@ -376,7 +324,7 @@ export const HomePage = () => {
           </section>
 
           {/* ── 5. ROADMAP ──────────────────────────────────── */}
-          <section data-s="4" style={{ ...sectionStyle, scrollSnapAlign: 'start' }}
+          <section data-s="4" style={{ ...sectionStyle, scrollSnapAlign: undefined }}
             className="relative overflow-hidden z-10"
           >
             <div className="max-w-3xl mx-auto px-6 lg:px-8 w-full py-10">
@@ -475,7 +423,7 @@ export const HomePage = () => {
           </section>
 
           {/* ── FOOTER ──────────────────────────────────────── */}
-          <div style={{ scrollSnapAlign: 'start' }} className="relative z-10 bg-white">
+          <div style={{ scrollSnapAlign: undefined }} className="relative z-10 bg-white">
             <Footer />
           </div>
 
