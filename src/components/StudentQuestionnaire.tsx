@@ -1081,11 +1081,12 @@ export const StudentQuestionnaire = () => {
     return (
       <>
         <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl mx-auto text-center">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-            >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            {/* Header — narrow centred */}
+            <div className="max-w-3xl mx-auto text-center">
               <div className="w-20 h-20 bg-student-yellow-light text-accent rounded-full flex items-center justify-center mx-auto mb-6">
                 <Check className="w-10 h-10" />
               </div>
@@ -1096,10 +1097,12 @@ export const StudentQuestionnaire = () => {
               <Button onClick={() => navigate('/')} variant="outline" className="mt-4">
                 Voltar ao Início
               </Button>
+            </div>
 
-              {matched && matched.length > 0 && (
-                <div className="mt-12 text-left">
-                  <h3 className="text-2xl font-bold mb-6 text-center">Os teus matches</h3>
+            {/* Cards — full marketplace width */}
+            {matched && matched.length > 0 && (
+              <div className="max-w-7xl mx-auto mt-12">
+                <h3 className="text-2xl font-bold mb-6 text-center">Os teus matches</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {matched.map((t, index) => {
                       const subjects = Array.isArray(t.subjects) ? t.subjects : []
@@ -1189,11 +1192,11 @@ export const StudentQuestionnaire = () => {
                         </motion.div>
                       )
                     })}
-                  </div>
                 </div>
-              )}
-            </motion.div>
-          </div>
+              </div>
+            )}
+          </motion.div>
+        </div>
         </div>
 
         {showAuthOverlay && (
