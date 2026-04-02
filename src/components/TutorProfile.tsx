@@ -205,22 +205,28 @@ export const TutorProfile = () => {
   })()
   const raw = rawParsed
 
-  const subjects: string[] = raw.question_5_answer || currentData.subjects || []
-  const teachingLevels: string[] = raw.question_4_answer || []
-  const methodology: string[] = raw.question_15_answer || []
-  const specialNeeds: string[] = raw.question_17_answer || []
-  const hobbies: string[] = raw.question_16_answer || []
-  const format: string = raw.question_9_answer || 'indiferente'
-  const academicDegree: string = raw.question_2_answer || currentData.education || ''
-  const hasExperience: boolean = raw.question_3_answer === 'Sim'
-  const experienceYears: string = raw.question_3_extra || ''
-  const district: string = raw.question_11_answer || raw.question_10_answer || ''
-  const municipality: string = raw.question_12_answer || raw.question_11_answer || ''
-  const parish: string = raw.question_13_answer || raw.question_12_answer || ''
-  const horasSemana: string = raw.question_6_answer || ''
-  const teachingType: string = Array.isArray(raw.question_1_answer)
-    ? raw.question_1_answer[0]
-    : raw.question_1_answer || ''
+  const toArr = (v: any): string[] => Array.isArray(v) ? v : (v ? [String(v)] : [])
+  const firstFilled = (...vals: any[]): string[] => vals.map(toArr).find(a => a.length > 0) ?? []
+
+  // Semantic columns take priority; raw_answers used as fallback for pre-migration tutors
+  const subjects       = firstFilled(currentData.subjects, raw.question_4_answer, raw.question_5_answer)
+  const teachingLevels = firstFilled((currentData as any).teaching_levels, raw.question_3_answer, raw.question_4_answer)
+  const methodology    = firstFilled((currentData as any).teaching_approach, raw.question_13_answer, raw.question_15_answer)
+  const specialNeeds   = firstFilled((currentData as any).accepted_profiles, raw.question_15_answer, raw.question_17_answer)
+  const hobbies        = firstFilled((currentData as any).hobbies, raw.question_14_answer, raw.question_16_answer)
+
+  const modalities     = firstFilled((currentData as any).modalities, raw.question_8_answer, raw.question_9_answer)
+  const format: string = modalities[0] || raw.question_9_answer || 'indiferente'
+
+  const academicDegree: string = currentData.education || raw.question_12_answer || raw.question_2_answer || ''
+
+  const district: string     = currentData.location     || raw.question_9_answer  || raw.question_11_answer || raw.question_10_answer || ''
+  const municipality: string = (currentData as any).municipality || raw.question_9_municipality || raw.question_12_answer || raw.question_11_answer || ''
+  const parish: string       = (currentData as any).parish       || raw.question_9_parish  || raw.question_13_answer || raw.question_12_answer || ''
+
+  const horasSemana: string = (currentData as any).sessions_per_week || raw.question_5_answer || raw.question_6_answer || ''
+  const teachingType: string = firstFilled((currentData as any).class_type, raw.question_1_answer)[0] || ''
+
   // Plataforma (Q14 novo, Q102 legacy)
   const platform: string = raw.question_14_answer || raw.question_102_answer || ''
 
@@ -233,11 +239,12 @@ export const TutorProfile = () => {
     }
     return `${t}€`
   }
-  const displayHourlyRate = currentData.hourly_rate || deriveHourlyRate(raw.question_7_answer || '')
+  const displayHourlyRate = currentData.hourly_rate || deriveHourlyRate(raw.question_7_answer || raw.question_6_answer || '')
 
-  const experienceLabel = raw.question_3_answer
-    ? (hasExperience ? (experienceYears ? `${experienceYears} anos de experiência` : 'Com experiência') : 'Sem experiência')
-    : (currentData.experience || 'Iniciante')
+  const experienceLabel: string = currentData.experience
+    || (raw.question_3_answer === 'Sim'
+        ? (raw.question_3_extra ? `${raw.question_3_extra} anos de experiência` : 'Com experiência')
+        : raw.question_3_answer === 'Não' ? 'Sem experiência' : 'Iniciante')
 
   const formatLabel = (f: string) => {
     if (f === 'presencial') return 'Presencial'
@@ -246,8 +253,8 @@ export const TutorProfile = () => {
     return 'Presencial ou Online'
   }
 
-  // Grelha de disponibilidade — formato: { "Seg_Manhã": true, "Ter_Tarde": false, ... }
-  const scheduleRaw = raw.question_8_answer
+  // Grelha de disponibilidade — semantic column primeiro, fallback raw Q7 (novo) / Q8 (antigo)
+  const scheduleRaw = (currentData as any).schedule || raw.question_7_answer || raw.question_8_answer
   const schedule: Record<string, boolean> =
     scheduleRaw && typeof scheduleRaw === 'object' && !Array.isArray(scheduleRaw)
       ? scheduleRaw : {}
