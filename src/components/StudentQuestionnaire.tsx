@@ -1197,7 +1197,6 @@ export const StudentQuestionnaire = () => {
             )}
           </motion.div>
         </div>
-        </div>
 
         {showAuthOverlay && (
           <div
