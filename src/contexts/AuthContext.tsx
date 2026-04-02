@@ -55,19 +55,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userRole, setUserRole] = useState<UserRole>(null)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session)
       setUser(session?.user ?? null)
+      if (session?.user) {
+        const role = await detectRole(session.user)
+        setUserRole(role)
+      }
       setLoading(false)
-      if (session?.user) detectRole(session.user).then(setUserRole)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session)
       setUser(session?.user ?? null)
+      if (session?.user) {
+        const role = await detectRole(session.user)
+        setUserRole(role)
+      } else {
+        setUserRole(null)
+      }
       setLoading(false)
-      if (session?.user) detectRole(session.user).then(setUserRole)
-      else setUserRole(null)
     })
 
     return () => subscription.unsubscribe()
