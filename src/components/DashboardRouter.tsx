@@ -21,6 +21,8 @@ export const DashboardRouter = () => {
     else navigate('/dashboard/tutor-profile')
   }
 
+  console.log('[DashboardRouter] render — loading=', loading, 'user=', user?.id ?? 'none', 'userRole=', userRole)
+
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background">

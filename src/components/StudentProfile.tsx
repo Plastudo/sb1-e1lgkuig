@@ -280,7 +280,8 @@ export const StudentProfile = () => {
   // ── Render: Tutor Detail ───────────────────────────────────────────────
   if (selectedTutor) {
     const tutorRaw = selectedTutor.raw_answers || {}
-    const tutorSubjects: string[] = tutorRaw.question_5_answer || selectedTutor.subjects || []
+    const rawSubjects = selectedTutor.subjects || tutorRaw.question_5_answer || tutorRaw.question_4_answer || []
+    const tutorSubjects: string[] = Array.isArray(rawSubjects) ? rawSubjects : [rawSubjects].filter(Boolean)
 
     return (
       <div className="min-h-screen bg-background flex flex-col">
@@ -548,7 +549,8 @@ export const StudentProfile = () => {
                         ) : (
                           colTutors.map(tutor => {
                             const tutorRaw = tutor.raw_answers || {}
-                            const tutorSubjects: string[] = tutorRaw.question_5_answer || tutor.subjects || []
+                            const rawSubjects = tutor.subjects || tutorRaw.question_5_answer || tutorRaw.question_4_answer || []
+                            const tutorSubjects: string[] = Array.isArray(rawSubjects) ? rawSubjects : [rawSubjects].filter(Boolean)
                             return (
                               <div
                                 key={tutor.id}

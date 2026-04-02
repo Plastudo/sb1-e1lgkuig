@@ -56,24 +56,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      console.log('[Auth] getSession →', session ? `user=${session.user.id}` : 'no session')
       setSession(session)
       setUser(session?.user ?? null)
       if (session?.user) {
         const role = await detectRole(session.user)
+        console.log('[Auth] getSession detectRole →', role)
         setUserRole(role)
       }
+      console.log('[Auth] getSession setLoading(false)')
       setLoading(false)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      console.log('[Auth] onAuthStateChange event=', _event, 'user=', session?.user?.id ?? 'none')
       setSession(session)
       setUser(session?.user ?? null)
       if (session?.user) {
         const role = await detectRole(session.user)
+        console.log('[Auth] onAuthStateChange detectRole →', role)
         setUserRole(role)
       } else {
         setUserRole(null)
       }
+      console.log('[Auth] onAuthStateChange setLoading(false)')
       setLoading(false)
     })
 
