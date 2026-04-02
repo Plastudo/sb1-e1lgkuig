@@ -5,7 +5,7 @@ import { motion, AnimatePresence, Reorder } from 'framer-motion'
 import { Button } from './ui/button'
 import { Card } from './ui/card'
 import { supabase } from '../lib/supabase'
-import { ChevronRight, ChevronLeft, Check, GripVertical } from 'lucide-react'
+import { ChevronRight, ChevronLeft, Check, GripVertical, Star, Wifi } from 'lucide-react'
 import { AuthModal } from './AuthModal'
 import { BookOpen, User, Building, Gamepad, Target, GraduationCap, MapPin } from 'lucide-react'
 import { Calendar, Monitor, Home } from 'lucide-react'
@@ -1099,32 +1099,96 @@ export const StudentQuestionnaire = () => {
 
               {matched && matched.length > 0 && (
                 <div className="mt-12 text-left">
-                  <h3 className="text-2xl font-bold mb-4 text-center">Os teus matches</h3>
+                  <h3 className="text-2xl font-bold mb-6 text-center">Os teus matches</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {matched.map((t) => (
-                      <Card key={t.tutorId} className="p-6 flex flex-col gap-3">
-                        {t.profile_picture && (
-                          <img
-                            src={t.profile_picture}
-                            alt={t.name}
-                            className="w-16 h-16 rounded-full object-cover mx-auto"
-                          />
-                        )}
-                        <div>
-                          <h3 className="text-xl font-bold">{t.name}</h3>
-                          <p className="text-muted-foreground text-sm">{t.subjects?.join(', ')}</p>
-                        </div>
-                        <span className="bg-student-yellow-light text-foreground text-xs font-semibold px-2.5 py-0.5 rounded self-start">
-                          Match: {t.compatibility}%
-                        </span>
-                        <Button
-                          onClick={() => handleSelectTutor(t.tutorId)}
-                          className="w-full mt-auto"
+                    {matched.map((t, index) => {
+                      const subjects = Array.isArray(t.subjects) ? t.subjects : []
+                      return (
+                        <motion.div
+                          key={t.tutorId}
+                          initial={{ opacity: 0, y: 24 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.08, duration: 0.4 }}
                         >
-                          Escolher Explicador
-                        </Button>
-                      </Card>
-                    ))}
+                          <div
+                            className="relative rounded-3xl overflow-hidden bg-white border border-border/40 shadow-sm hover:shadow-md transition-shadow duration-300"
+                            style={{ height: 440 }}
+                          >
+                            {/* Green tent */}
+                            <div
+                              className="absolute bottom-0 left-0 right-0"
+                              style={{
+                                height: '48%',
+                                background: 'hsl(82 30% 82%)',
+                                clipPath: 'polygon(50% 0%, 100% 36%, 100% 100%, 0% 100%, 0% 36%)',
+                              }}
+                            />
+
+                            {/* Photo */}
+                            <img
+                              src={t.profile_picture || '/default-avatar.svg'}
+                              alt={t.name}
+                              className="absolute z-10 pointer-events-none"
+                              style={{
+                                height: 180, bottom: 60,
+                                left: '50%', transform: 'translateX(-50%)',
+                                objectFit: 'contain', objectPosition: 'top',
+                              }}
+                            />
+
+                            {/* Top info */}
+                            <div className="absolute top-0 left-0 right-0 p-4 z-10">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0 flex-1">
+                                  <h3 className="text-base font-bold text-foreground leading-tight truncate">{t.name}</h3>
+                                  {/* Match % + progress bar */}
+                                  <div className="mt-1.5">
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className="text-xs font-semibold text-accent">{t.compatibility}% compatível</span>
+                                    </div>
+                                    <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+                                      <div
+                                        className="h-full bg-accent rounded-full transition-all duration-700"
+                                        style={{ width: `${t.compatibility}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                                {/* Rating circle */}
+                                <div className="shrink-0 w-12 h-12 rounded-full bg-tutor-green-light flex flex-col items-center justify-center shadow-sm">
+                                  <span className="text-base font-black text-primary leading-none">{t.rating ?? '—'}</span>
+                                  <Star className="w-2.5 h-2.5 text-primary fill-primary mt-0.5" />
+                                </div>
+                              </div>
+
+                              {/* Subject pills */}
+                              <div className="flex flex-wrap gap-1.5 mt-3">
+                                {subjects.slice(0, 3).map(s => (
+                                  <span key={s} className="flex items-center gap-1 px-2.5 py-1 bg-tutor-green-light text-primary rounded-full text-xs font-semibold">
+                                    <BookOpen className="w-3 h-3 shrink-0" />{s}
+                                  </span>
+                                ))}
+                                {subjects.length > 3 && (
+                                  <span className="px-2.5 py-1 bg-muted text-muted-foreground rounded-full text-xs font-medium">
+                                    +{subjects.length - 3}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Bottom button */}
+                            <div className="absolute bottom-0 left-0 right-0 z-20 px-4 pb-4">
+                              <button
+                                onClick={() => handleSelectTutor(t.tutorId)}
+                                className="w-full h-10 rounded-2xl bg-accent text-foreground text-xs font-semibold hover:bg-accent/90 transition-colors"
+                              >
+                                Escolher Explicador
+                              </button>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )
+                    })}
                   </div>
                 </div>
               )}
