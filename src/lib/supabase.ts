@@ -38,6 +38,19 @@ export type TutorData = {
   availability_summary?: string;
   created_at?: string;
   updated_at?: string;
+  // Semantic columns (added by migration 20260402000000_semantic_columns.sql)
+  class_type?: string[];
+  teaching_levels?: string[];
+  sessions_per_week?: string;
+  modalities?: string[];
+  municipality?: string;
+  parish?: string;
+  study_center?: string;
+  accepted_objectives?: string[];
+  teaching_approach?: string[];
+  hobbies?: string[];
+  accepted_profiles?: string[];
+  schedule?: Record<string, any>;
 };
 
 export type TempStudentData = {
@@ -58,4 +71,19 @@ export type StudentData = {
   subjects?: string[];
   created_at?: string;
   updated_at?: string;
+  // Semantic columns (added by migration 20260402000000_semantic_columns.sql)
+  class_type?: string;
+  level?: string;
+  level_area?: string;
+  sessions_per_week?: string;
+  budget?: string;
+  schedule?: Record<string, any>;
+  preferred_format?: string;
+  location?: string;
+  municipality?: string;
+  parish?: string;
+  objective?: string;
+  preferred_approach?: string[];
+  hobbies?: string[];
+  profile?: string;
 };

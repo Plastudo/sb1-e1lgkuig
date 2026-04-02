@@ -323,6 +323,8 @@ export const StudentQuestionnaire = () => {
   const [priorityOrder, setPriorityOrder] = useState<number[]>([3, 4, 5, 6, 8, 9, 10, 11])
   const [showAuthOverlay, setShowAuthOverlay] = useState(false)
   const [pendingContact, setPendingContact] = useState<TutorMatch | null>(null)
+  const [districtCollapsed, setDistrictCollapsed] = useState(false)
+  const [municipalityCollapsed, setMunicipalityCollapsed] = useState(false)
   const { user } = useAuth()
   const navigate = useNavigate()
 
@@ -330,6 +332,10 @@ export const StudentQuestionnaire = () => {
     console.log('[StudentQuestionnaire] session_id:', sessionId)
     localStorage.setItem('student_session_id', sessionId)
   }, [sessionId])
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [currentStep])
 
   //-----------------HANDLE ANSWER-----------------
   const handleAnswer = async (questionId: number, answer: any) => {
@@ -373,6 +379,36 @@ export const StudentQuestionnaire = () => {
     setLoading(true)
     try {
       const finalAnswers = { ...answers, ...(extraAnswers || {}) }
+
+      // Se o aluno já está autenticado, persiste as respostas imediatamente
+      // (upsert por user_id substitui sempre o questionário anterior)
+      if (user) {
+        const { error: saveErr } = await supabase.from('students').upsert({
+          user_id: user.id,
+          name: user.user_metadata?.name || user.email?.split('@')[0] || '',
+          email: user.email || '',
+          question_1_answer: finalAnswers['question_1_answer'] || '',
+          raw_answers: finalAnswers,
+          // Semantic columns
+          class_type: finalAnswers['question_1_answer'] || null,
+          level: finalAnswers['question_2_answer'] || null,
+          level_area: finalAnswers['question_2_area'] || null,
+          subjects: finalAnswers['question_3_answer'] || [],
+          sessions_per_week: finalAnswers['question_4_answer'] || null,
+          budget: finalAnswers['question_5_answer'] || null,
+          schedule: finalAnswers['question_6_answer'] || null,
+          preferred_format: finalAnswers['question_7_answer'] || null,
+          location: finalAnswers['question_8_answer'] || null,
+          municipality: finalAnswers['question_8_municipality'] || null,
+          parish: finalAnswers['question_8_parish'] || null,
+          objective: finalAnswers['question_9_answer'] || null,
+          preferred_approach: finalAnswers['question_10_answer'] || [],
+          hobbies: finalAnswers['question_11_answer'] || [],
+          profile: finalAnswers['question_12_answer'] || null,
+        }, { onConflict: 'user_id' })
+        if (saveErr) console.warn('⚠️ Erro ao atualizar respostas do aluno:', saveErr)
+      }
+
       const matches = await getBestTutorMatches(finalAnswers as any)
       logSupabase('MATCHES CALCULADOS', { count: matches.length })
       setMatched(matches)
@@ -418,14 +454,32 @@ export const StudentQuestionnaire = () => {
       if (tempData) {
         const { data: authData } = await supabase.auth.getUser()
         const u = authData?.user
-        const { error } = await supabase.from('students').insert({
+        // Upsert por user_id: se o aluno já tinha um perfil, substitui as
+        // respostas anteriores pelas do novo questionário completado
+        const ra = tempData.raw_answers || {}
+        const { error } = await supabase.from('students').upsert({
           user_id: userId,
           name: u?.user_metadata?.name || u?.email?.split('@')[0] || '',
           email: u?.email || '',
           question_1_answer: tempData.question_1_answer || '',
-          raw_answers: tempData.raw_answers || {},
-          subjects: tempData.raw_answers?.question_3_answer || [],
-        })
+          raw_answers: ra,
+          // Semantic columns
+          class_type: ra['question_1_answer'] || null,
+          level: ra['question_2_answer'] || null,
+          level_area: ra['question_2_area'] || null,
+          subjects: ra['question_3_answer'] || [],
+          sessions_per_week: ra['question_4_answer'] || null,
+          budget: ra['question_5_answer'] || null,
+          schedule: ra['question_6_answer'] || null,
+          preferred_format: ra['question_7_answer'] || null,
+          location: ra['question_8_answer'] || null,
+          municipality: ra['question_8_municipality'] || null,
+          parish: ra['question_8_parish'] || null,
+          objective: ra['question_9_answer'] || null,
+          preferred_approach: ra['question_10_answer'] || [],
+          hobbies: ra['question_11_answer'] || [],
+          profile: ra['question_12_answer'] || null,
+        }, { onConflict: 'user_id' })
         if (!error) {
           await supabase.from('temp_students').delete().eq('session_id', sessionId)
         }
@@ -483,6 +537,9 @@ export const StudentQuestionnaire = () => {
               {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-accent" />}
               <h2 className="text-2xl font-bold">{question.title}</h2>
               {question.subtitle && <p className="text-gray-600 mt-2">{question.subtitle}</p>}
+              <span className="inline-block mt-3 px-3 py-1 text-xs font-medium bg-accent/15 text-accent rounded-full">
+                Podes selecionar mais do que uma opção
+              </span>
             </div>
             <div className="grid gap-3">
               {question.options.map(option => {
@@ -695,60 +752,106 @@ export const StudentQuestionnaire = () => {
 
             {/* Distrito */}
             <div>
-              <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Distrito</p>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 max-h-64 overflow-y-auto pr-1">
-                {getDistritos().map(d => (
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Distrito</p>
+                {selectedDistrict && districtCollapsed && (
                   <button
-                    key={d}
                     onClick={() => {
-                      handleAnswer(8, d)
-                      setAnswers(prev => ({ ...prev, question_8_answer: d, question_8_municipality: undefined, question_8_parish: undefined }))
+                      setDistrictCollapsed(false)
+                      setMunicipalityCollapsed(false)
+                      setAnswers(prev => ({ ...prev, question_8_answer: '', question_8_municipality: undefined, question_8_parish: undefined }))
                     }}
-                    className={`p-3 rounded-lg border-2 text-left text-sm transition-colors ${
-                      selectedDistrict === d
-                        ? 'border-accent bg-student-yellow-light text-foreground font-medium'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                    }`}
+                    className="text-xs text-accent underline"
                   >
-                    {d}
+                    Alterar
                   </button>
-                ))}
+                )}
               </div>
-            </div>
-
-            {/* Concelho */}
-            {selectedDistrict && municipalities.length > 0 && (
-              <div>
-                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Concelho</p>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 max-h-48 overflow-y-auto pr-1">
-                  {municipalities.map(m => (
+              {districtCollapsed && selectedDistrict ? (
+                <button className="w-full p-3 rounded-lg border-2 border-accent bg-student-yellow-light text-foreground font-medium text-left text-sm">
+                  {selectedDistrict}
+                </button>
+              ) : (
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 max-h-64 overflow-y-auto pr-1">
+                  {getDistritos().map(d => (
                     <button
-                      key={m}
+                      key={d}
                       onClick={() => {
-                        setAnswers(prev => ({ ...prev, question_8_municipality: m, question_8_parish: undefined }))
+                        handleAnswer(8, d)
+                        setAnswers(prev => ({ ...prev, question_8_answer: d, question_8_municipality: undefined, question_8_parish: undefined }))
+                        setDistrictCollapsed(true)
+                        setMunicipalityCollapsed(false)
                       }}
                       className={`p-3 rounded-lg border-2 text-left text-sm transition-colors ${
-                        selectedMunicipality === m
+                        selectedDistrict === d
                           ? 'border-accent bg-student-yellow-light text-foreground font-medium'
                           : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                       }`}
                     >
-                      {m}
+                      {d}
                     </button>
                   ))}
                 </div>
+              )}
+            </div>
+
+            {/* Concelho */}
+            {selectedDistrict && districtCollapsed && municipalities.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Concelho</p>
+                  {selectedMunicipality && municipalityCollapsed && (
+                    <button
+                      onClick={() => {
+                        setMunicipalityCollapsed(false)
+                        setAnswers(prev => ({ ...prev, question_8_municipality: undefined, question_8_parish: undefined }))
+                      }}
+                      className="text-xs text-accent underline"
+                    >
+                      Alterar
+                    </button>
+                  )}
+                </div>
+                {municipalityCollapsed && selectedMunicipality ? (
+                  <button className="w-full p-3 rounded-lg border-2 border-accent bg-student-yellow-light text-foreground font-medium text-left text-sm">
+                    {selectedMunicipality}
+                  </button>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {municipalities.map(m => (
+                      <button
+                        key={m}
+                        onClick={() => {
+                          setAnswers(prev => ({ ...prev, question_8_municipality: m, question_8_parish: undefined }))
+                          setMunicipalityCollapsed(true)
+                        }}
+                        className={`p-3 rounded-lg border-2 text-left text-sm transition-colors ${
+                          selectedMunicipality === m
+                            ? 'border-accent bg-student-yellow-light text-foreground font-medium'
+                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
             {/* Freguesia */}
-            {selectedMunicipality && parishes.length > 0 && (
+            {selectedMunicipality && municipalityCollapsed && parishes.length > 0 && (
               <div>
                 <p className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Freguesia</p>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 max-h-48 overflow-y-auto pr-1">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {parishes.map(p => (
                     <button
                       key={p}
-                      onClick={() => setAnswers(prev => ({ ...prev, question_8_parish: p }))}
+                      onClick={() => {
+                        setAnswers(prev => ({ ...prev, question_8_parish: p }))
+                        const next = getNextStep(currentStep, answers)
+                        setTimeout(() => setCurrentStep(next), 300)
+                      }}
                       className={`p-3 rounded-lg border-2 text-left text-sm transition-colors ${
                         selectedParish === p
                           ? 'border-accent bg-student-yellow-light text-foreground font-medium'
@@ -860,6 +963,9 @@ export const StudentQuestionnaire = () => {
               {question.icon && <question.icon className="w-12 h-12 mx-auto mb-4 text-accent" />}
               <h2 className="text-2xl font-bold">{question.title}</h2>
               {question.subtitle && <p className="text-gray-600 mt-2">{question.subtitle}</p>}
+              <span className="inline-block mt-3 px-3 py-1 text-xs font-medium bg-accent/15 text-accent rounded-full">
+                Podes selecionar mais do que uma opção
+              </span>
             </div>
 
             {!subjectData ? (
@@ -996,7 +1102,8 @@ export const StudentQuestionnaire = () => {
   const progress = ((currentStep + 1) / questions.length) * 100
 
   return (
-    <div className="min-h-screen py-8 bg-gradient-to-br from-yellow-50 via-green-50 to-blue-50">
+    <>
+    <div className="min-h-screen py-8 pb-16 bg-background">
       <div className="max-w-4xl mx-auto px-4">
         <motion.div className="mb-8">
           <div className="bg-white rounded-full h-3 overflow-hidden shadow-sm">
@@ -1056,7 +1163,8 @@ export const StudentQuestionnaire = () => {
           </motion.div>
         </AnimatePresence>
       </div>
-      <Footer />
     </div>
+    <Footer />
+    </>
   )
 }
