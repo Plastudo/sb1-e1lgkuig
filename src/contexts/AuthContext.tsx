@@ -55,19 +55,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [userRole, setUserRole] = useState<UserRole>(null)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      console.log('[Auth] getSession →', session ? `user=${session.user.id}` : 'no session')
       setSession(session)
       setUser(session?.user ?? null)
+      if (session?.user) {
+        const role = await detectRole(session.user)
+        console.log('[Auth] getSession detectRole →', role)
+        setUserRole(role)
+      }
+      console.log('[Auth] getSession setLoading(false)')
       setLoading(false)
-      if (session?.user) detectRole(session.user).then(setUserRole)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      console.log('[Auth] onAuthStateChange event=', _event, 'user=', session?.user?.id ?? 'none')
       setSession(session)
       setUser(session?.user ?? null)
+      if (session?.user) {
+        const role = await detectRole(session.user)
+        console.log('[Auth] onAuthStateChange detectRole →', role)
+        setUserRole(role)
+      } else {
+        setUserRole(null)
+      }
+      console.log('[Auth] onAuthStateChange setLoading(false)')
       setLoading(false)
-      if (session?.user) detectRole(session.user).then(setUserRole)
-      else setUserRole(null)
     })
 
     return () => subscription.unsubscribe()

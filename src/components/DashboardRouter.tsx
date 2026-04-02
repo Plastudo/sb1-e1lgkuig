@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -8,11 +7,6 @@ import { motion } from 'framer-motion'
 export const DashboardRouter = () => {
   const { user, userRole, loading } = useAuth()
   const navigate = useNavigate()
-  const [checking, setChecking] = useState(true)
-
-  useEffect(() => {
-    if (!loading) setChecking(false)
-  }, [loading])
 
   const setRoleManual = async (role: 'student' | 'tutor') => {
     if (!user) return
@@ -27,7 +21,9 @@ export const DashboardRouter = () => {
     else navigate('/dashboard/tutor-profile')
   }
 
-  if (loading || checking) {
+  console.log('[DashboardRouter] render — loading=', loading, 'user=', user?.id ?? 'none', 'userRole=', userRole)
+
+  if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background">
         <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />

@@ -24,13 +24,16 @@ export const Login: React.FC = () => {
   }, [auth?.userRole]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleComplete = (userId?: string) => {
+    console.log('[Login] handleComplete userId=', userId, 'view=', view)
     if (!userId) return
     didNavigate.current = true
     if (view === 'student') {
       localStorage.setItem('tutmait_role', 'student')
+      console.log('[Login] navigating → /dashboard/student-profile')
       navigate('/dashboard/student-profile')
     } else {
       localStorage.setItem('tutmait_role', 'tutor')
+      console.log('[Login] navigating → /dashboard/tutor-profile')
       navigate('/dashboard/tutor-profile')
     }
   }

@@ -30,6 +30,17 @@ type PublicTutor = {
   success_rate: string
   total_students: number
   raw_answers: Record<string, any>
+  // Semantic columns
+  class_type?: string[]
+  teaching_levels?: string[]
+  sessions_per_week?: string
+  modalities?: string[]
+  municipality?: string
+  parish?: string
+  teaching_approach?: string[]
+  hobbies?: string[]
+  accepted_profiles?: string[]
+  schedule?: Record<string, any>
 }
 
 // ── Animação de entrada ──────────────────────────────────────────────────────
@@ -178,22 +189,36 @@ export const TutorProfilePublic = () => {
     return {}
   })()
 
-  const subjects: string[] = raw.question_5_answer || tutor.subjects || []
-  const teachingLevels: string[] = raw.question_4_answer || []
-  const methodology: string[] = raw.question_15_answer || []
-  const specialNeeds: string[] = raw.question_17_answer || []
-  const hobbies: string[] = raw.question_16_answer || []
-  const format: string = raw.question_9_answer || "indiferente"
-  const academicDegree: string = raw.question_2_answer || tutor.education || ""
-  const hasExperience: boolean = raw.question_3_answer === "Sim"
-  const experienceYears: string = raw.question_3_extra || ""
-  const district: string = raw.question_11_answer || raw.question_10_answer || ""
-  const municipality: string = raw.question_12_answer || raw.question_11_answer || ""
-  const parish: string = raw.question_13_answer || raw.question_12_answer || ""
-  const horasSemana: string = raw.question_6_answer || ""
-  const teachingType: string = Array.isArray(raw.question_1_answer)
-    ? raw.question_1_answer[0]
-    : raw.question_1_answer || ""
+  const toArr = (v: any): string[] => Array.isArray(v) ? v : (v ? [String(v)] : [])
+  const firstFilled = (...vals: any[]): string[] => vals.map(toArr).find(a => a.length > 0) ?? []
+
+  // Semantic columns take priority; raw_answers used as fallback for pre-migration tutors
+  const subjects       = firstFilled(tutor.subjects, raw.question_4_answer, raw.question_5_answer)
+  const teachingLevels = firstFilled(tutor.teaching_levels, raw.question_3_answer, raw.question_4_answer)
+  const methodology    = firstFilled(tutor.teaching_approach, raw.question_13_answer, raw.question_15_answer)
+  const specialNeeds   = firstFilled(tutor.accepted_profiles, raw.question_15_answer, raw.question_17_answer)
+  const hobbies        = firstFilled(tutor.hobbies, raw.question_14_answer, raw.question_16_answer)
+
+  const modalities     = firstFilled(tutor.modalities, raw.question_8_answer, raw.question_9_answer)
+  const format: string = modalities[0] || raw.question_9_answer || "indiferente"
+
+  const academicDegree: string = tutor.education || raw.question_12_answer || raw.question_2_answer || ""
+
+  // Experience: new tutors have tutor.experience column ("X anos" / "Sem experiência")
+  // Old tutors had question_3_answer = "Sim"/"Não" + question_3_extra for years
+  const experienceLabel: string = tutor.experience
+    || (raw.question_3_answer === "Sim"
+        ? (raw.question_3_extra ? `${raw.question_3_extra} anos de experiência` : "Com experiência")
+        : raw.question_3_answer === "Não" ? "Sem experiência" : "")
+
+  const district: string     = tutor.location    || raw.question_9_answer  || raw.question_11_answer || raw.question_10_answer || ""
+  const municipality: string = tutor.municipality || raw.question_9_municipality || raw.question_12_answer || raw.question_11_answer || ""
+  const parish: string       = tutor.parish       || raw.question_9_parish  || raw.question_13_answer || raw.question_12_answer || ""
+
+  const horasSemana: string = tutor.sessions_per_week || raw.question_5_answer || raw.question_6_answer || ""
+
+  const teachingType: string = firstFilled(tutor.class_type, raw.question_1_answer)[0] || ""
+
   // Plataforma (Q14 novo, Q102 legacy)
   const platform: string = raw.question_14_answer || raw.question_102_answer || ""
 
@@ -206,11 +231,7 @@ export const TutorProfilePublic = () => {
     }
     return `${t}€`
   }
-  const displayHourlyRate = tutor.hourly_rate || deriveHourlyRate(raw.question_7_answer || "")
-
-  const experienceLabel = raw.question_3_answer
-    ? (hasExperience ? (experienceYears ? `${experienceYears} anos de experiência` : "Com experiência") : "Sem experiência")
-    : (tutor.experience || "Iniciante")
+  const displayHourlyRate = tutor.hourly_rate || deriveHourlyRate(raw.question_7_answer || raw.question_6_answer || "")
 
   const formatLabel = (f: string) => {
     if (f === "presencial") return "Presencial"
